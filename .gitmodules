@@ -1,0 +1,6 @@
+[submodule "bin/sokol-tools-bin"]
+	path = bin/sokol-tools-bin
+	url = https://github.com/floooh/sokol-tools-bin
+[submodule "src/third_party/sokol-odin"]
+	path = src/third_party/sokol-odin
+	url = https://github.com/floooh/sokol-odin

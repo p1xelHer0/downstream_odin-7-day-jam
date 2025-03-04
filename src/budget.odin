@@ -1,0 +1,11 @@
+package game
+
+BUDGET_GFX_SPRITES :: 512
+
+// game, swapchain, sdtx
+BUDGET_PIPELINE_POOL   :: 1 + 1 + 1
+BUDGET_BUFFER_POOL     :: 3 + 2 + 1
+BUDGET_IMAGE_POOL      :: 3 + 1
+BUDGET_SAMPLER_POOL    :: 1 + 1 + 1
+BUDGET_SHADER_POOL     :: 1 + 1 + 1
+BUDGET_ATTACHMENT_POOL :: 1

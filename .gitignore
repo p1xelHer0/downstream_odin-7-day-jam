@@ -1,0 +1,21 @@
+# Build script
+/build
+*.a
+*.o
+*.so
+*.lib
+*.obj
+*.pdb
+*.bin
+*.exp
+*.ilk
+*.dll
+*.dylib
+*.exe
+*.dSYM/
+
+# Shaders
+src/shaders/*.glsl.odin
+
+# macOS
+**.DS_Store
