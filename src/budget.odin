@@ -2,6 +2,8 @@ package game
 
 BUDGET_GFX_SPRITES :: 512
 
+BUDGET_GAME_PATHWAYS :: 40 * 22
+
 // game, swapchain, sdtx
 BUDGET_PIPELINE_POOL   :: 1 + 1 + 1
 BUDGET_BUFFER_POOL     :: 3 + 2 + 1

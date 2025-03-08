@@ -243,11 +243,11 @@ gfx_init :: proc(renderer: ^GFX_Renderer) -> bool
 
 // Draw a sprite by adding it to the sprite batch for the upcoming frame
 //
-// position: X and Y coordinates with {0, 0} being bottom-left
-// scale:  Scale of the sprite being rendered
-// color:  Color multiplier of the sprite, {255, 255, 255, 1} format
+// position: X and Y coordinates with {0, 0} being top-left
+// scale:    Scale of the sprite being rendered
+// color:    Color multiplier of the sprite, {255, 255, 255, 1} format
 // location: Location in the sprite sheet with {0, 0} being top-left
-// size:   Size of the area of the sprite sheet to render
+// size:     Size of the area of the sprite sheet to render
 gfx_draw_sprite :: proc(
   sprite_batch: ^Sprite_Batch,
   position:     [2]int,
@@ -260,7 +260,7 @@ gfx_draw_sprite :: proc(
   if sprite_batch.len > BUDGET_GFX_SPRITES do return
 
   vertex: Sprite_Shader = {
-    location = {f32(location.x), f32(location.y)},
+    location = {f32(location.x * assets.ATLAS_TILE_SIZE), f32(location.y * assets.ATLAS_TILE_SIZE)},
     size     = {f32(size.x), f32(size.y)},
     position = {f32(position.x), f32(position.y)},
     scale    = {f32(scale.x), f32(scale.y)},

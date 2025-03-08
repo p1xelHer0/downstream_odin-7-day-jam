@@ -14,9 +14,10 @@ import "shaders"
 
 Game_Mem :: struct
 {
-  RENDERER:     GFX_Renderer,
-  TIMER:        Timer,
-  INPUT:        Input,
+  RENDERER: GFX_Renderer,
+  TIMER:    Timer,
+  INPUT:    Input,
+  GAME:     Game,
 }
 
 Key :: enum
@@ -46,7 +47,6 @@ Timer :: struct
 TICK     :: 1.0 / 60.0
 TICK_MAX :: 0.25
 
-TILE_UNIT   :: assets.ATLAS_TILE_SIZE
 GAME_WIDTH  :: f32(320)
 GAME_HEIGHT :: f32(180)
 
@@ -108,6 +108,8 @@ game_init :: proc()
     return
   }
 
+  start_level(idx = 2, game = &G.GAME)
+
   when HOT_RELOAD
   {
     game_hot_reloaded(G)
@@ -141,10 +143,14 @@ game_frame :: proc()
   // Sprite batch
   G.RENDERER.sprite_batch.len = 0
 
+  fmt.printfln("%v", G.GAME.player)
+
+  render_level(&G.RENDERER, &G.GAME.level)
+
   gfx_draw_sprite(
     &G.RENDERER.sprite_batch,
-    location = [2]int{22, 5} * assets.ATLAS_TILE_SIZE,
-    position = {32, 32},
+    location = {22, 5},
+    position = G.GAME.player * assets.ATLAS_TILE_SIZE,
     size = {16, 16},
   )
 
@@ -161,8 +167,6 @@ game_frame :: proc()
   sdtx.font(0)
   sdtx.color3b(255, 255, 255)
   sdtx.printf("Some sample text for the game\n")
-  sdtx.printf("HP: 130\n")
-  sdtx.printf("Mana: 0\n")
 
   // Game rendering pass
   vertex_shader_uniforms := shaders.Vs_Params {

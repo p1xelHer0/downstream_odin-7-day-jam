@@ -16,9 +16,9 @@ Music_Name :: enum {}
 
 @(rodata)
 SOUND := #partial[Sound_Name]Asset {
-  .BEEP = {
-    bytes = #load("BEEP.ogg"),
-  }
+  // .BEEP = {
+  //   bytes = #load("BEEP.ogg"),
+  // }
 }
 
 @(rodata)
@@ -53,4 +53,5 @@ Level :: struct
 @(rodata)
 LEVELS := [?]Level {
   1 = {data = #load("level_1", string)},
+  2 = {data = #load("level_2", string)},
 }
