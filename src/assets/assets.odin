@@ -1,6 +1,10 @@
 package asset
 
-ATLAS_TILE_SIZE :: 16
+ATLAS_TILE_SIZE :: 8
+ATLAS_TILE :: [2]int {ATLAS_TILE_SIZE, ATLAS_TILE_SIZE}
+
+LEVEL_PNG_WIDTH  :: 40
+LEVEL_PNG_HEIGHT :: 23
 
 Asset :: struct
 {
@@ -29,29 +33,48 @@ ATLAS := Asset {
 Sprite :: struct
 {
   location: [2]int,
-  size:   [2]int,
+  size:     [2]int,
 }
 
 Sprite_Name :: enum
 {
-  ZERO,
-  WIZARD,
+  PLAYER,
+  START,
+  STREAM,
+  GOAL,
+  WIN,
 }
 
 SPRITE := #partial [Sprite_Name]Sprite {
-  .WIZARD = {
-    location = [2]int{22, 5} * ATLAS_TILE_SIZE,
-    size   = [2]int{1, 1} * ATLAS_TILE_SIZE,
-  }
+  .PLAYER = {
+    location = [2]int{0, 0},
+    size     = ATLAS_TILE,
+  },
+  .START = {
+    location = [2]int{0, 3},
+    size     = ATLAS_TILE,
+  },
+  .STREAM = {
+    location = [2]int{0, 2},
+    size     = ATLAS_TILE,
+  },
+  .GOAL = {
+    location = [2]int{1, 2},
+    size     = ATLAS_TILE,
+  },
+  .WIN = {
+    location = [2]int{2, 0},
+    size     = ATLAS_TILE,
+  },
 }
 
 Level :: struct
 {
-  data: string,
+  bytes: []u8,
 }
 
 @(rodata)
 LEVELS := [?]Level {
-  1 = {data = #load("level_1", string)},
-  2 = {data = #load("level_2", string)},
+  {bytes = #load("level_1.png")},
+  // {bytes = #load("level_2.png")},
 }

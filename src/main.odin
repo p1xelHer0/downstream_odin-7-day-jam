@@ -9,7 +9,7 @@ import sg "third_party/sokol-odin/sokol/gfx"
 import sglue "third_party/sokol-odin/sokol/glue"
 import slog "third_party/sokol-odin/sokol/log"
 
-import "assets"
+// import "assets"
 import "shaders"
 
 Game_Mem :: struct
@@ -44,8 +44,7 @@ Timer :: struct
   accumulator: f64,
 }
 
-TICK     :: 1.0 / 60.0
-TICK_MAX :: 0.25
+TICK :: 1.0 / 3
 
 GAME_WIDTH  :: f32(320)
 GAME_HEIGHT :: f32(180)
@@ -108,7 +107,8 @@ game_init :: proc()
     return
   }
 
-  start_level(idx = 2, game = &G.GAME)
+  gameplay_init(&G.GAME)
+  gameplay_start_level(&G.GAME, 0)
 
   when HOT_RELOAD
   {
@@ -127,10 +127,6 @@ game_frame :: proc()
 
   new_time := time.now()
   frame_time := time.duration_seconds(time.diff(G.TIMER.current, new_time))
-  if frame_time > TICK_MAX
-  {
-    frame_time = TICK_MAX
-  }
   G.TIMER.current = new_time
 
   timer_tick -= frame_time
@@ -138,21 +134,14 @@ game_frame :: proc()
   {
     G.TIMER.tick += 1
     timer_tick += TICK
+
+    gameplay_loop(&G.GAME)
   }
 
   // Sprite batch
   G.RENDERER.sprite_batch.len = 0
 
-  fmt.printfln("%v", G.GAME.player)
-
-  render_level(&G.RENDERER, &G.GAME.level)
-
-  gfx_draw_sprite(
-    &G.RENDERER.sprite_batch,
-    location = {22, 5},
-    position = G.GAME.player * assets.ATLAS_TILE_SIZE,
-    size = {16, 16},
-  )
+  gameplay_render(renderer = &G.RENDERER, game = &G.GAME, tick = G.TIMER.tick)
 
   if G.RENDERER.sprite_batch.len > 0
   {
@@ -165,8 +154,9 @@ game_frame :: proc()
   sdtx.canvas(GAME_WIDTH, GAME_HEIGHT)
   sdtx.origin(0, 0)
   sdtx.font(0)
-  sdtx.color3b(255, 255, 255)
-  sdtx.printf("Some sample text for the game\n")
+  sdtx.color3b(155, 255, 255)
+  sdtx.printf("level: %v\n", G.GAME.level_cur)
+  sdtx.printf("%v\n", G.GAME.player.pos)
 
   // Game rendering pass
   vertex_shader_uniforms := shaders.Vs_Params {
@@ -214,6 +204,7 @@ game_event :: proc(ev: ^sapp.Event)
     {
     case .SPACE:
       G.INPUT.keys += {.SPACE}
+      gameplay_start_level(&G.GAME, 0)
 
     case .W, .UP:
       G.INPUT.keys += {.UP}
@@ -333,4 +324,5 @@ game_hot_reloaded :: proc(mem: rawptr)
   G = (^Game_Mem)(mem)
 
   gfx_hot_reload(&G.RENDERER)
+  gameplay_hot_reloaded(&G.GAME)
 }

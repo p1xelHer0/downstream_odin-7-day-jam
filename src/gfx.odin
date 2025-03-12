@@ -248,7 +248,7 @@ gfx_init :: proc(renderer: ^GFX_Renderer) -> bool
 // color:    Color multiplier of the sprite, {255, 255, 255, 1} format
 // location: Location in the sprite sheet with {0, 0} being top-left
 // size:     Size of the area of the sprite sheet to render
-gfx_draw_sprite :: proc(
+gfx_add_to_sprite_batch :: proc(
   sprite_batch: ^Sprite_Batch,
   position:     [2]int,
   scale:        [2]int = {1, 1},
