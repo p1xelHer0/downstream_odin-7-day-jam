@@ -12,6 +12,8 @@ import slog "third_party/sokol-odin/sokol/log"
 // import "assets"
 import "shaders"
 
+GAME_NAME :: "Downstream"
+
 Game_Mem :: struct
 {
   RENDERER: GFX_Renderer,
@@ -39,12 +41,13 @@ Input :: struct
 Timer :: struct
 {
   tick:        u64,
+  speed:       int,
   elapsed:     f64,
   current:     time.Time,
   accumulator: f64,
 }
 
-TICK :: 1.0 / 3
+TICK :: 1.0 / 4
 
 GAME_WIDTH  :: f32(320)
 GAME_HEIGHT :: f32(180)
@@ -56,7 +59,7 @@ G: ^Game_Mem
 @(export)
 game_app_desc :: proc() -> sapp.Desc
 {
-  window_title: cstring = "hot!" when HOT_RELOAD else "game"
+  window_title: cstring = "hot!" when HOT_RELOAD else GAME_NAME
 
   return {
     width = 320,
@@ -76,6 +79,7 @@ game_init :: proc()
 
   G.TIMER.elapsed = 0
   G.TIMER.current = time.now()
+  G.TIMER.speed = 1
 
   sg.setup({
     environment = sglue.environment(),
@@ -129,7 +133,7 @@ game_frame :: proc()
   frame_time := time.duration_seconds(time.diff(G.TIMER.current, new_time))
   G.TIMER.current = new_time
 
-  timer_tick -= frame_time
+  timer_tick -= frame_time * f64(G.TIMER.speed)
   if timer_tick <= 0
   {
     G.TIMER.tick += 1
@@ -205,7 +209,7 @@ game_event :: proc(ev: ^sapp.Event)
     {
     case .SPACE:
       G.INPUT.keys += {.SPACE}
-      gameplay_start_level(&G.GAME, 0)
+      G.TIMER.speed = 3
 
     case .W, .UP:
       G.INPUT.keys += {.UP}
@@ -219,11 +223,17 @@ game_event :: proc(ev: ^sapp.Event)
       G.INPUT.keys += {.RIGHT}
       G.GAME.player.dir = .RIGHT
 
-    case .Q:
-      sapp.quit()
+    case .R:
+      gameplay_start_level(&G.GAME, 0)
 
     case .F:
       sapp.toggle_fullscreen()
+
+    case .Q:
+      when ODIN_DEBUG
+      {
+        sapp.quit()
+      }
     }
   }
   else if ev.type == .KEY_UP
@@ -232,6 +242,7 @@ game_event :: proc(ev: ^sapp.Event)
     {
     case .SPACE:
       G.INPUT.keys -= {.SPACE}
+      G.TIMER.speed = 1
 
     case .W, .UP:
       G.INPUT.keys -= {.UP}
