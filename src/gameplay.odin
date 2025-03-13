@@ -1,7 +1,7 @@
 package game
 
 import "core:fmt"
-import "core:slice"
+// import "core:slice"
 import "core:image/png"
 
 import "assets"
@@ -44,10 +44,26 @@ Player :: struct
 
 Level :: struct
 {
-  start:    Pos,
-  goal:     Pos,
-  pathways: [BUDGET_GAMEPLAY_PATHWAYS]Pos,
+  pathways: [BUDGET_GAMEPLAY_PATHWAYS]Pathway,
   len:      int,
+}
+
+Entity_Id :: distinct u32
+
+Pathway_Kind :: enum
+{
+  STREAM,
+  CROSSING,
+  START,
+  GOAL,
+}
+
+Pathway :: struct
+{
+  id:     Entity_Id,
+  kind:   bit_set[Pathway_Kind;u32],
+  pos:    Pos,
+  sprite: assets.Sprite_Name,
 }
 
 Dir_Vecs := [Dir][2]int {
@@ -73,7 +89,9 @@ gameplay_start_level :: proc(game: ^Game, level_idx: int)
 {
   game.level_cur = level_idx
   level := game.levels[game.level_cur]
-  game.player.pos = level.start
+  start, start_ok := get_start(level.pathways[:level.len])
+  assert(start_ok, fmt.tprintf("start not found for assets.LEVEL[%v]", level_idx))
+  game.player.pos = start.pos
   game.player.dir = .DOWN
   game.state = .PLAY
 }
@@ -90,14 +108,106 @@ gameplay_render :: proc(renderer: ^GFX_Renderer, game: ^Game, tick: u64)
   case .PLAY:
     level := game.levels[game.level_cur]
 
-    render_sprite(renderer, level.start, .START)
     for &pathway in level.pathways[:level.len]
     {
-      render_sprite(renderer, pathway, .STREAM)
+      render_sprite(renderer, pathway.pos, pathway.sprite)
     }
-    render_sprite(renderer, level.goal, .GOAL)
     render_sprite(renderer, game.player.pos, .PLAYER)
   }
+}
+
+gameplay_loop :: proc(game: ^Game)
+{
+  switch game.state
+  {
+  case .MENU:
+    game.state = .PLAY
+
+  case .WIN:
+
+  case .PLAY:
+    level := game.levels[game.level_cur]
+
+    pathways := level.pathways[:level.len]
+    cur_pathway, cur_pathway_ok := find_pathway(pathways, game.player.pos)
+    assert(cur_pathway_ok, fmt.tprintf("player out of bounds at: %v", game.player.pos))
+
+    // win-con!
+    if .GOAL in cur_pathway.kind
+    {
+      next_level := game.level_cur + 1
+      if next_level == len(assets.LEVELS)
+      { // we made it through all levels
+        gameplay_start_level(game, next_level % len(assets.LEVELS))
+        // gameplay_win(game)
+        break
+      }
+      else
+      { // start the next level
+        gameplay_start_level(game, next_level)
+        break
+      }
+    }
+
+    // the player can only "steer" in a crossing
+    direction := .CROSSING in cur_pathway.kind ? game.player.dir : .DOWN
+    next_pos := game.player.pos + Dir_Vecs[direction]
+    _, next_pos_valid := find_pathway(pathways, next_pos)
+
+    // the player steered to a valid pathway
+    if next_pos_valid
+    {
+      game.player.prev_pos = game.player.pos
+      game.player.pos = next_pos
+      game.steps += 1
+    }
+    else
+    { // invalid pathway - go with the current
+      dirs: Dirs = {.DOWN, .LEFT, .RIGHT, .UP}
+      for dir in dirs
+      {
+        next_pos = game.player.pos + Dir_Vecs[dir]
+        if next_pos == game.player.prev_pos do continue
+        if has_pathway(pathways, next_pos)
+        {
+          game.player.prev_pos = game.player.pos
+          game.player.pos = next_pos
+          game.steps += 1
+          break
+        }
+      }
+    }
+  }
+
+  find_pathway :: proc(pathways: []Pathway, pos: Pos) -> (^Pathway, bool)
+  {
+    for &pathway in pathways
+    {
+      if pathway.pos == pos do return &pathway, true
+    }
+    return {}, false
+  }
+
+  has_pathway :: proc(pathways: []Pathway, pos: Pos) -> bool
+  {
+    for &pathway in pathways
+    {
+      if pathway.pos == pos do return true
+    }
+    return false
+  }
+}
+
+gameplay_win :: proc(game: ^Game)
+{
+  fmt.printfln("you is a winner!")
+  game.state = .WIN
+}
+
+gameplay_hot_reloaded :: proc(game: ^Game)
+{
+  gameplay_init(game)
+  gameplay_start_level(game, game.level_cur)
 }
 
 @(private)
@@ -114,72 +224,11 @@ render_sprite :: proc(renderer: ^GFX_Renderer, pos: Pos, sprite: assets.Sprite_N
   )
 }
 
-gameplay_loop :: proc(game: ^Game)
-{
-  switch game.state
-  {
-  case .MENU:
-    game.state = .PLAY
-
-  case .WIN:
-
-  case .PLAY:
-    game.steps += 1
-
-    level := game.levels[game.level_cur]
-    pathways := level.pathways[:level.len]
-    next_pos := game.player.pos + Dir_Vecs[game.player.dir]
-
-    /**/ if game.player.pos == level.goal
-    {
-      next_level := game.level_cur + 1
-      if next_level == len(assets.LEVELS)
-      {
-        gameplay_win(game)
-      }
-      else
-      {
-        gameplay_start_level(game, next_level)
-      }
-    }
-    else if next_pos == level.goal
-    {
-      game.player.prev_pos = game.player.pos
-      game.player.pos = next_pos
-    }
-    else if slice.contains(pathways, next_pos)
-    {
-      game.player.prev_pos = game.player.pos
-      game.player.pos = next_pos
-    }
-    else
-    {
-      dirs: Dirs = {.DOWN, .LEFT, .RIGHT, .UP}
-      for dir in dirs
-      {
-        next_pos = game.player.pos + Dir_Vecs[dir]
-        if next_pos == game.player.prev_pos do continue
-        if slice.contains(pathways, next_pos)
-        {
-          game.player.prev_pos = game.player.pos
-          game.player.pos = next_pos
-          break
-        }
-      }
-    }
-  }
-}
-
-gameplay_win :: proc(game: ^Game)
-{
-  fmt.printfln("you is a winner!")
-  game.state = .WIN
-}
-
 @(private)
 parse_level :: proc(game: ^Game, level_idx: int)
 {
   level: Level
+  pathway_id: Entity_Id
 
   level_asset := assets.LEVELS[level_idx]
   level_png, level_png_err := png.load_from_bytes(data = level_asset.bytes, allocator = context.temp_allocator)
@@ -192,11 +241,14 @@ parse_level :: proc(game: ^Game, level_idx: int)
   assert(level_png.width == assets.LEVEL_PNG_WIDTH, fmt.tprintf("level_png.width != %v: %v", assets.LEVEL_PNG_WIDTH, level_png.width))
   assert(level_png.height == assets.LEVEL_PNG_HEIGHT, fmt.tprintf("level_png.height != %v: %v", assets.LEVEL_PNG_HEIGHT, level_png.height))
 
+  start_set: bool
+  goal_set: bool
+
   for idx := 0; idx < len(pixels); idx += 4
   {
     rgba := pixels[idx:idx + 4]
 
-    // discard "empty" pixels
+    // discard non-opaque pixels
     if rgba[3] < 255
     {
       continue
@@ -209,38 +261,69 @@ parse_level :: proc(game: ^Game, level_idx: int)
       y := pixel_idx / assets.LEVEL_PNG_WIDTH
       pos := Pos{x, y}
 
-      start_set: bool
-      goal_set: bool
+      pathway: Pathway
+      pathway.id = pathway_id
+      pathway.pos = pos
 
-      /**/ if pixel == {0, 255, 0}   // Start
+      /**/ if pixel == {255, 255, 0}   // Start
       {
         assert(!start_set, fmt.tprintf("multiple starts found in assets.LEVELS[%v]", level_idx))
-        level.start = pos
         start_set = true
+
+        pathway.kind += {.START}
+        pathway.sprite = .START
       }
-      else if pixel == {0, 115, 255} // Stream
+      else if pixel == {0, 115, 255}   // Stream
       {
-        level.pathways[level.len] = pos
-        level.len += 1
+        pathway.kind += {.STREAM}
+        pathway.sprite = .STREAM
       }
-      else if pixel == {255, 0, 0}   // Goal
+      else if pixel == {0, 175, 255}   // Crossing
+      {
+        pathway.kind += {.CROSSING}
+        pathway.sprite = .CROSSING
+      }
+      else if pixel == {255, 0, 0}     // Goal
       {
         assert(!goal_set, fmt.tprintf("multiple goals found in assets.LEVELS[%v]", level_idx))
-        level.goal = pos
         goal_set = true
+
+        pathway.kind += {.GOAL}
+        pathway.sprite = .GOAL
       }
       else
       {
         assert(false, fmt.tprintf("incorrect pixel color found in assets.LEVELS[%v] @ %v: %v", level_idx, pos, pixel))
       }
+
+      level.pathways[level.len] = pathway
+      level.len += 1
+      pathway_id += 1
     }
   }
+
+  assert(start_set, fmt.tprintf("start not found for assets.LEVEL[%v]", level_idx))
+  assert(goal_set, fmt.tprintf("goal not found for assets.LEVEL[%v]", level_idx))
 
   game.levels[level_idx] = level
 }
 
-gameplay_hot_reloaded :: proc(game: ^Game)
+@(private)
+get_start :: proc(pathways: []Pathway) -> (^Pathway, bool)
 {
-  gameplay_init(game)
-  gameplay_start_level(game, game.level_cur)
+  for &pathway in pathways
+  {
+    if .START in pathway.kind do return &pathway, true
+  }
+  return {}, false
+}
+
+@(private)
+get_goal :: proc(pathways: []Pathway) -> (^Pathway, bool)
+{
+  for &pathway in pathways
+  {
+    if .GOAL in pathway.kind do return &pathway, true
+  }
+  return {}, false
 }

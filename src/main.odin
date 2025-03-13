@@ -157,6 +157,7 @@ game_frame :: proc()
   sdtx.color3b(155, 255, 255)
   sdtx.printf("level: %v\n", G.GAME.level_cur)
   sdtx.printf("%v\n", G.GAME.player.pos)
+  sdtx.printf("steps: %v\n", G.GAME.steps)
 
   // Game rendering pass
   vertex_shader_uniforms := shaders.Vs_Params {
@@ -210,10 +211,13 @@ game_event :: proc(ev: ^sapp.Event)
       G.INPUT.keys += {.UP}
     case .S, .DOWN:
       G.INPUT.keys += {.DOWN}
+      G.GAME.player.dir = .DOWN
     case .A, .LEFT:
       G.INPUT.keys += {.LEFT}
+      G.GAME.player.dir = .LEFT
     case .D, .RIGHT:
       G.INPUT.keys += {.RIGHT}
+      G.GAME.player.dir = .RIGHT
 
     case .Q:
       sapp.quit()

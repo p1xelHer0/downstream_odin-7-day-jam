@@ -41,6 +41,7 @@ Sprite_Name :: enum
   PLAYER,
   START,
   STREAM,
+  CROSSING,
   GOAL,
   WIN,
 }
@@ -56,6 +57,10 @@ SPRITE := #partial [Sprite_Name]Sprite {
   },
   .STREAM = {
     location = [2]int{0, 2},
+    size     = ATLAS_TILE,
+  },
+  .CROSSING = {
+    location = [2]int{1, 3},
     size     = ATLAS_TILE,
   },
   .GOAL = {
@@ -76,5 +81,5 @@ Level :: struct
 @(rodata)
 LEVELS := [?]Level {
   {bytes = #load("level_1.png")},
-  // {bytes = #load("level_2.png")},
+  {bytes = #load("level_2.png")},
 }
