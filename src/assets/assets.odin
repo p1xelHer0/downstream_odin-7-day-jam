@@ -95,9 +95,9 @@ Level :: struct
 
 @(rodata)
 LEVELS := [?]Level {
-  // {bytes = #load("level_1.png")},
-  // {bytes = #load("level_2.png")},
-  // {bytes = #load("level_3.png")},
-  // {bytes = #load("level_4.png")},
+  {bytes = #load("level_1.png")},
+  {bytes = #load("level_2.png")},
+  {bytes = #load("level_3.png")},
+  {bytes = #load("level_4.png")},
   {bytes = #load("level_5.png")},
 }
