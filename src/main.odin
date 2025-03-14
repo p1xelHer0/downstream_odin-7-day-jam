@@ -97,6 +97,10 @@ game_init :: proc()
     logger = { func = slog.func },
   })
 
+  sdtx.canvas(GAME_WIDTH, GAME_HEIGHT)
+  sdtx.origin(0, 0)
+  sdtx.font(0)
+
   gfx_init_success := gfx_init(&G.RENDERER)
   if !gfx_init_success
   {
@@ -154,10 +158,6 @@ game_frame :: proc()
   }
 
   // Text rendering
-  dpi_scale := sapp.dpi_scale()
-  sdtx.canvas(GAME_WIDTH, GAME_HEIGHT)
-  sdtx.origin(0, 0)
-  sdtx.font(0)
   sdtx.color3b(155, 255, 255)
   sdtx.printf("level: %v\n", G.GAME.level_cur)
   sdtx.printf("%v\n", G.GAME.player.pos)
@@ -185,6 +185,7 @@ game_frame :: proc()
   // Setup resolution scale depending on current window size
   window_width := sapp.widthf()
   window_height := sapp.heightf()
+  dpi_scale := sapp.dpi_scale()
   resolution_scale := gfx_get_resolution_scaling(window_width, window_height, dpi_scale)
 
   sg.begin_pass({action = G.RENDERER.swapchain.pass_action, swapchain = sglue.swapchain(), label = "swapchain-pass"})
@@ -233,6 +234,20 @@ game_event :: proc(ev: ^sapp.Event)
       when ODIN_DEBUG
       {
         sapp.quit()
+      }
+
+    ////////////////////////////////////////
+
+    case .J:
+      when ODIN_DEBUG
+      {
+        gameplay_start_level(&G.GAME, (G.GAME.level_cur - 1) %% G.GAME.level_len)
+      }
+
+    case .K:
+      when ODIN_DEBUG
+      {
+        gameplay_start_level(&G.GAME, (G.GAME.level_cur - 1) %% G.GAME.level_len)
       }
     }
   }
