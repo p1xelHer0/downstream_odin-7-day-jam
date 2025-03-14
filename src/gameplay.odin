@@ -150,25 +150,24 @@ gameplay_loop :: proc(game: ^Game)
     {
       next_level := game.level_cur + 1
       if next_level == len(assets.LEVELS)
-      { // we made it through all levels
-        gameplay_start_level(game, next_level % len(assets.LEVELS))
-        // gameplay_win(game)
+      {
+        gameplay_win(game)
         break
       }
       else
-      { // start the next level
+      {
         gameplay_start_level(game, next_level)
         break
       }
     }
 
+    ////////////////////////////////////////
+
     // the player can only "steer" in a crossing - otherwise the try to go .DOWN
     direction := .CROSSING in cur_pathway.kind ? game.player.dir : .DOWN
     move := Dir_Vecs[direction]
 
-    ////////////////////////////////////////
     // stepping on a .SLOW tile takes and extra step
-
     /**/ if .SLOW in game.player.effects
     {
       game.player.effects -= {.SLOW}
@@ -180,10 +179,9 @@ gameplay_loop :: proc(game: ^Game)
       game.player.effects += {.SLOW}
     }
 
-    ////////////////////////////////////////
-
     next_pos := game.player.pos + move
 
+    // without this the player will just bounce back and forth between .TELEPORT pathways
     if .TELEPORT in cur_pathway.kind && .TELEPORT_COOLDOWN not_in game.player.effects
     {
       teleport_pathway, teleport_pathway_ok := find_pathway_id(pathways, cur_pathway.teleport_to)
@@ -199,29 +197,33 @@ gameplay_loop :: proc(game: ^Game)
     // the player moved to a valid pathway
     if next_pathway_ok
     {
-      game.player.prev_pos = game.player.pos
-      game.player.pos = next_pos
+      commit_move(next_pathway, &game.player)
+    }
+    else // we need to find the next pathway
+    {
+      next_pathway, next_pathway_ok = drift(pathways, game)
+    }
 
-      if .TELEPORT not_in next_pathway.kind
+    // a boost means we move one extra pathway without incrementing `steps`
+    if .BOOST in cur_pathway.kind
+    {
+      if next_pathway_ok
       {
-        game.player.effects -= {.TELEPORT_COOLDOWN}
+        // we only move an extra step on .BOOST pathways
+        // this is a bit wonky but it will have to do
+        // NOTE: This means that .BOOST pathways are useless if they are not two connected
+        if .BOOST in next_pathway.kind
+        {
+          drift(pathways, game)
+        }
       }
-    }
-    else
-    {
-      drift(pathways, game)
-    }
-
-    // a boost just means we move one extra pathway without incrementing `steps`
-    if .BOOST in cur_pathway.kind && .BOOST in next_pathway.kind
-    {
-      drift(pathways, game)
     }
 
     game.steps += 1
   }
 
-  drift :: proc(pathways: []Pathway, game: ^Game)
+  // drifting means we disregard the players direction and find the first available pathway
+  drift :: proc(pathways: []Pathway, game: ^Game) -> (^Pathway, bool)
   {
     dirs: Dirs = {.DOWN, .LEFT, .RIGHT, .UP}
     for dir in dirs
@@ -234,17 +236,27 @@ gameplay_loop :: proc(game: ^Game)
       next_pathway, next_pathway_valid := find_pathway_pos(pathways, next_pos)
       if next_pathway_valid
       {
-        game.player.prev_pos = game.player.pos
-        game.player.pos = next_pos
-        game.player.effects -= {.TELEPORT_COOLDOWN}
-
-        return
+        commit_move(next_pathway, &game.player)
+        return next_pathway, true
       }
     }
 
     assert(false, fmt.tprintf("player failed to drift in assets.LEVELS[%v] @ %v: %v", game.level_cur, game.player.pos))
+
+    return {}, false
   }
 
+  commit_move :: proc(to: ^Pathway, player: ^Player)
+  {
+    player.prev_pos = player.pos
+    player.pos = to.pos
+
+    // drifting to a non-.TELEPORT pathway resets the cooldown
+    if .TELEPORT not_in to.kind
+    {
+      player.effects -= {.TELEPORT_COOLDOWN}
+    }
+  }
 }
 
 gameplay_win :: proc(game: ^Game)
@@ -293,6 +305,7 @@ parse_level :: proc(game: ^Game, level_idx: int)
   start_set: bool
   goal_set: bool
 
+  // map one pathway to another - a teleport
   Teleport_Mapper :: struct
   {
     connection: [2]Entity_Id,
@@ -359,7 +372,6 @@ parse_level :: proc(game: ^Game, level_idx: int)
       }
       else if pixel[3] == 254 // encode teleporters as two matching pixels with 254 transparency
       {
-        fmt.printfln("found teleport at pos %v", pos)
         pathway.kind += {.TELEPORT}
         pathway.sprite = .TELEPORT
         teleport := teleports[pixel]
@@ -399,7 +411,7 @@ parse_level :: proc(game: ^Game, level_idx: int)
   game.levels[level_idx] = level
 }
 
-@(private)
+@(private, require_results)
 find_pathway_id :: proc(pathways: []Pathway, id: Entity_Id) -> (^Pathway, bool)
 {
   for &pathway in pathways
@@ -409,7 +421,7 @@ find_pathway_id :: proc(pathways: []Pathway, id: Entity_Id) -> (^Pathway, bool)
   return {}, false
 }
 
-@(private)
+@(private, require_results)
 find_pathway_start :: proc(pathways: []Pathway) -> (^Pathway, bool)
 {
   for &pathway in pathways
@@ -419,7 +431,7 @@ find_pathway_start :: proc(pathways: []Pathway) -> (^Pathway, bool)
   return {}, false
 }
 
-@(private)
+@(private, require_results)
 find_pathway_goal :: proc(pathways: []Pathway) -> (^Pathway, bool)
 {
   for &pathway in pathways
@@ -429,7 +441,7 @@ find_pathway_goal :: proc(pathways: []Pathway) -> (^Pathway, bool)
   return {}, false
 }
 
-@(private)
+@(private, require_results)
 find_pathway_pos :: proc(pathways: []Pathway, pos: Pos) -> (^Pathway, bool)
 {
   for &pathway in pathways
@@ -439,7 +451,7 @@ find_pathway_pos :: proc(pathways: []Pathway, pos: Pos) -> (^Pathway, bool)
   return {}, false
 }
 
-@(private)
+@(private, require_results)
 has_pathway :: proc(pathways: []Pathway, pos: Pos) -> bool
 {
   for &pathway in pathways
