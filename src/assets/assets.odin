@@ -11,19 +11,17 @@ Asset :: struct
   bytes: []u8,
 }
 
-Sound_Name :: enum
-{
-  BEEP
-}
-
-Music_Name :: enum {}
-
-@(rodata)
-SOUND := #partial[Sound_Name]Asset {
-  // .BEEP = {
-  //   bytes = #load("BEEP.ogg"),
-  // }
-}
+// Sound_Name :: enum
+// {
+//   WAVE
+// }
+//
+// @(rodata)
+// SOUND := #partial[Sound_Name]Asset {
+//   .WAVE = {
+//     bytes = #load("wave.ogg"),
+//   }
+// }
 
 @(rodata)
 ATLAS := Asset {

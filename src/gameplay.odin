@@ -51,13 +51,13 @@ Player_Effect :: enum
 
 Level :: struct
 {
-  pathways: [BUDGET_GAMEPLAY_PATHWAYS]Pathway,
-  len:      int,
+  tiles: [BUDGET_GAMEPLAY_TILES]Tile,
+  len:   int,
 }
 
 Entity_Id :: distinct u32
 
-Pathway_Kind :: enum
+Tile_Kind :: enum
 {
   STREAM,
   CROSSING,
@@ -68,10 +68,10 @@ Pathway_Kind :: enum
   GOAL,
 }
 
-Pathway :: struct
+Tile :: struct
 {
   id:          Entity_Id,
-  kind:        bit_set[Pathway_Kind],
+  kind:        bit_set[Tile_Kind],
   pos:         Pos,
   sprite:      assets.Sprite_Name,
   teleport_to: Entity_Id
@@ -100,7 +100,7 @@ gameplay_start_level :: proc(game: ^Game, level_idx: int)
 {
   game.level_cur = level_idx
   level := game.levels[game.level_cur]
-  start, start_ok := find_pathway_start(level.pathways[:level.len])
+  start, start_ok := find_tile_start(level.tiles[:level.len])
   assert(start_ok, fmt.tprintf("start not found for assets.LEVEL[%v]", level_idx))
   game.player.pos = start.pos
   game.player.dir = .DOWN
@@ -119,9 +119,9 @@ gameplay_render :: proc(renderer: ^GFX_Renderer, game: ^Game, tick: u64)
   case .PLAY:
     level := game.levels[game.level_cur]
 
-    for &pathway in level.pathways[:level.len]
+    for &tile in level.tiles[:level.len]
     {
-      render_sprite(renderer, pathway.pos, pathway.sprite)
+      render_sprite(renderer, tile.pos, tile.sprite)
     }
     render_sprite(renderer, game.player.pos, .PLAYER)
   }
@@ -139,14 +139,14 @@ gameplay_loop :: proc(game: ^Game)
   case .PLAY:
     level := game.levels[game.level_cur]
 
-    pathways := level.pathways[:level.len]
-    cur_pathway, cur_pathway_ok := find_pathway_pos(pathways, game.player.pos)
-    assert(cur_pathway_ok, fmt.tprintf("player out of bounds at: %v", game.player.pos))
+    tiles := level.tiles[:level.len]
+    cur_tile, cur_tile_ok := find_tile_pos(tiles, game.player.pos)
+    assert(cur_tile_ok, fmt.tprintf("player out of bounds at: %v", game.player.pos))
 
     ////////////////////////////////////////
 
     // win-con!
-    if .GOAL in cur_pathway.kind
+    if .GOAL in cur_tile.kind
     {
       next_level := game.level_cur + 1
       if next_level == len(assets.LEVELS)
@@ -164,7 +164,7 @@ gameplay_loop :: proc(game: ^Game)
     ////////////////////////////////////////
 
     // the player can only "steer" in a crossing - otherwise the try to go .DOWN
-    direction := .CROSSING in cur_pathway.kind ? game.player.dir : .DOWN
+    direction := .CROSSING in cur_tile.kind ? game.player.dir : .DOWN
     move := Dir_Vecs[direction]
 
     // stepping on a .SLOW tile takes and extra step
@@ -172,49 +172,49 @@ gameplay_loop :: proc(game: ^Game)
     {
       game.player.effects -= {.SLOW}
     }
-    else if .SLOW in cur_pathway.kind
+    else if .SLOW in cur_tile.kind
     {
-      // the next move has no effect if we are on a .SLOW pathway
+      // the next move has no effect if we are on a .SLOW tile
       move = {0, 0}
       game.player.effects += {.SLOW}
     }
 
     next_pos := game.player.pos + move
 
-    // without this the player will just bounce back and forth between .TELEPORT pathways
-    if .TELEPORT in cur_pathway.kind && .TELEPORT_COOLDOWN not_in game.player.effects
+    // without this the player will just bounce back and forth between .TELEPORT tiles
+    if .TELEPORT in cur_tile.kind && .TELEPORT_COOLDOWN not_in game.player.effects
     {
-      teleport_pathway, teleport_pathway_ok := find_pathway_id(pathways, cur_pathway.teleport_to)
-      if teleport_pathway_ok
+      teleport_tile, teleport_tile_ok := find_tile_id(tiles, cur_tile.teleport_to)
+      if teleport_tile_ok
       {
-        next_pos = teleport_pathway.pos
+        next_pos = teleport_tile.pos
         game.player.effects += {.TELEPORT_COOLDOWN}
       }
     }
 
-    next_pathway, next_pathway_ok := find_pathway_pos(pathways, next_pos)
+    next_tile, next_tile_ok := find_tile_pos(tiles, next_pos)
 
-    // the player moved to a valid pathway
-    if next_pathway_ok
+    // the player moved to a valid tile
+    if next_tile_ok
     {
-      commit_move(next_pathway, &game.player)
+      commit_move(next_tile, &game.player)
     }
-    else // we need to find the next pathway
+    else // we need to find the next tile
     {
-      next_pathway, next_pathway_ok = drift(pathways, game)
+      next_tile, next_tile_ok = drift(tiles, game)
     }
 
-    // a boost means we move one extra pathway without incrementing `steps`
-    if .BOOST in cur_pathway.kind
+    // a boost means we move one extra tile without incrementing `steps`
+    if .BOOST in cur_tile.kind
     {
-      if next_pathway_ok
+      if next_tile_ok
       {
-        // we only move an extra step on .BOOST pathways
+        // we only move an extra step on .BOOST tiles
         // this is a bit wonky but it will have to do
-        // NOTE: This means that .BOOST pathways are useless if they are not two connected
-        if .BOOST in next_pathway.kind
+        // NOTE: This means that .BOOST tiles are useless if they are not two connected
+        if .BOOST in next_tile.kind
         {
-          drift(pathways, game)
+          drift(tiles, game)
         }
       }
     }
@@ -222,8 +222,8 @@ gameplay_loop :: proc(game: ^Game)
     game.steps += 1
   }
 
-  // drifting means we disregard the players direction and find the first available pathway
-  drift :: proc(pathways: []Pathway, game: ^Game) -> (^Pathway, bool)
+  // drifting means we disregard the players direction and find the first available tile
+  drift :: proc(tiles: []Tile, game: ^Game) -> (^Tile, bool)
   {
     dirs: Dirs = {.DOWN, .LEFT, .RIGHT, .UP}
     for dir in dirs
@@ -233,11 +233,11 @@ gameplay_loop :: proc(game: ^Game)
       // we can't go backwards
       if next_pos == game.player.prev_pos do continue
 
-      next_pathway, next_pathway_valid := find_pathway_pos(pathways, next_pos)
-      if next_pathway_valid
+      next_tile, next_tile_valid := find_tile_pos(tiles, next_pos)
+      if next_tile_valid
       {
-        commit_move(next_pathway, &game.player)
-        return next_pathway, true
+        commit_move(next_tile, &game.player)
+        return next_tile, true
       }
     }
 
@@ -246,12 +246,12 @@ gameplay_loop :: proc(game: ^Game)
     return {}, false
   }
 
-  commit_move :: proc(to: ^Pathway, player: ^Player)
+  commit_move :: proc(to: ^Tile, player: ^Player)
   {
     player.prev_pos = player.pos
     player.pos = to.pos
 
-    // drifting to a non-.TELEPORT pathway resets the cooldown
+    // drifting to a non-.TELEPORT tile resets the cooldown
     if .TELEPORT not_in to.kind
     {
       player.effects -= {.TELEPORT_COOLDOWN}
@@ -289,7 +289,7 @@ render_sprite :: proc(renderer: ^GFX_Renderer, pos: Pos, sprite: assets.Sprite_N
 parse_level :: proc(game: ^Game, level_idx: int)
 {
   level: Level
-  pathway_id: Entity_Id
+  tile_id: Entity_Id
 
   level_asset := assets.LEVELS[level_idx]
   level_png, level_png_err := png.load_from_bytes(data = level_asset.bytes, allocator = context.temp_allocator)
@@ -305,7 +305,7 @@ parse_level :: proc(game: ^Game, level_idx: int)
   start_set: bool
   goal_set: bool
 
-  // map one pathway to another - a teleport
+  // map one tile to another - a teleport
   Teleport_Mapper :: struct
   {
     connection: [2]Entity_Id,
@@ -330,52 +330,52 @@ parse_level :: proc(game: ^Game, level_idx: int)
       y := pixel_idx / assets.LEVEL_PNG_WIDTH
       pos := Pos{x, y}
 
-      pathway: Pathway
-      pathway.id = pathway_id
-      pathway.pos = pos
+      tile: Tile
+      tile.id = tile_id
+      tile.pos = pos
 
       /**/ if pixel == {255, 255, 0, 255}
       {
         assert(!start_set, fmt.tprintf("multiple starts found in assets.LEVELS[%v]", level_idx))
         start_set = true
 
-        pathway.kind += {.START}
-        pathway.sprite = .START
+        tile.kind += {.START}
+        tile.sprite = .START
       }
       else if pixel == {0, 115, 255, 255}
       {
-        pathway.kind += {.STREAM}
-        pathway.sprite = .STREAM
+        tile.kind += {.STREAM}
+        tile.sprite = .STREAM
       }
       else if pixel == {0, 115, 115, 255}
       {
-        pathway.kind += {.BOOST}
-        pathway.sprite = .BOOST
+        tile.kind += {.BOOST}
+        tile.sprite = .BOOST
       }
       else if pixel == {0, 60, 255, 255}
       {
-        pathway.kind += {.SLOW}
-        pathway.sprite = .SLOW
+        tile.kind += {.SLOW}
+        tile.sprite = .SLOW
       }
       else if pixel == {0, 175, 255, 255}
       {
-        pathway.kind += {.CROSSING}
-        pathway.sprite = .CROSSING
+        tile.kind += {.CROSSING}
+        tile.sprite = .CROSSING
       }
       else if pixel == {255, 0, 0, 255}
       {
         assert(!goal_set, fmt.tprintf("multiple goals found in assets.LEVELS[%v]", level_idx))
         goal_set = true
 
-        pathway.kind += {.GOAL}
-        pathway.sprite = .GOAL
+        tile.kind += {.GOAL}
+        tile.sprite = .GOAL
       }
       else if pixel[3] == 254 // encode teleporters as two matching pixels with 254 transparency
       {
-        pathway.kind += {.TELEPORT}
-        pathway.sprite = .TELEPORT
+        tile.kind += {.TELEPORT}
+        tile.sprite = .TELEPORT
         teleport := teleports[pixel]
-        teleport.connection[teleport.len] = pathway.id
+        teleport.connection[teleport.len] = tile.id
         teleport.len += 1
 
         teleports[pixel] = teleport
@@ -386,12 +386,12 @@ parse_level :: proc(game: ^Game, level_idx: int)
         if teleport.len == 2
         {
           fmt.printfln("%v", teleport)
-          prev_teleport, prev_teleport_ok := find_pathway_id(level.pathways[:level.len], teleport.connection[0])
+          prev_teleport, prev_teleport_ok := find_tile_id(level.tiles[:level.len], teleport.connection[0])
 
           assert(prev_teleport_ok, fmt.tprintf("could not connect teleports in assets.LEVELS[%v]", level_idx))
 
-          prev_teleport.teleport_to = pathway.id
-          pathway.teleport_to = prev_teleport.id
+          prev_teleport.teleport_to = tile.id
+          tile.teleport_to = prev_teleport.id
         }
       }
       else
@@ -399,9 +399,9 @@ parse_level :: proc(game: ^Game, level_idx: int)
         assert(false, fmt.tprintf("incorrect pixel color found in assets.LEVELS[%v] @ %v: %v", level_idx, pos, pixel))
       }
 
-      level.pathways[level.len] = pathway
+      level.tiles[level.len] = tile
       level.len += 1
-      pathway_id += 1
+      tile_id += 1
     }
   }
 
@@ -412,51 +412,51 @@ parse_level :: proc(game: ^Game, level_idx: int)
 }
 
 @(private, require_results)
-find_pathway_id :: proc(pathways: []Pathway, id: Entity_Id) -> (^Pathway, bool)
+find_tile_id :: proc(tiles: []Tile, id: Entity_Id) -> (^Tile, bool)
 {
-  for &pathway in pathways
+  for &tile in tiles
   {
-    if pathway.id == id do return &pathway, true
+    if tile.id == id do return &tile, true
   }
   return {}, false
 }
 
 @(private, require_results)
-find_pathway_start :: proc(pathways: []Pathway) -> (^Pathway, bool)
+find_tile_start :: proc(tiles: []Tile) -> (^Tile, bool)
 {
-  for &pathway in pathways
+  for &tile in tiles
   {
-    if .START in pathway.kind do return &pathway, true
+    if .START in tile.kind do return &tile, true
   }
   return {}, false
 }
 
 @(private, require_results)
-find_pathway_goal :: proc(pathways: []Pathway) -> (^Pathway, bool)
+find_tile_goal :: proc(tiles: []Tile) -> (^Tile, bool)
 {
-  for &pathway in pathways
+  for &tile in tiles
   {
-    if .GOAL in pathway.kind do return &pathway, true
+    if .GOAL in tile.kind do return &tile, true
   }
   return {}, false
 }
 
 @(private, require_results)
-find_pathway_pos :: proc(pathways: []Pathway, pos: Pos) -> (^Pathway, bool)
+find_tile_pos :: proc(tiles: []Tile, pos: Pos) -> (^Tile, bool)
 {
-  for &pathway in pathways
+  for &tile in tiles
   {
-    if pathway.pos == pos do return &pathway, true
+    if tile.pos == pos do return &tile, true
   }
   return {}, false
 }
 
 @(private, require_results)
-has_pathway :: proc(pathways: []Pathway, pos: Pos) -> bool
+has_tile :: proc(tiles: []Tile, pos: Pos) -> bool
 {
-  for &pathway in pathways
+  for &tile in tiles
   {
-    if pathway.pos == pos do return true
+    if tile.pos == pos do return true
   }
   return false
 }
