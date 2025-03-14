@@ -4,6 +4,8 @@ import "core:fmt"
 // import "core:slice"
 import "core:image/png"
 
+import sdtx "third_party/sokol-odin/sokol/debugtext"
+
 import "assets"
 
 Pos :: [2]int
@@ -53,6 +55,8 @@ Level :: struct
 {
   tiles: [BUDGET_GAMEPLAY_TILES]Tile,
   len:   int,
+  text:  []string,
+  steps: int,
 }
 
 Entity_Id :: distinct u32
@@ -99,10 +103,14 @@ gameplay_init :: proc(game: ^Game)
 gameplay_start_level :: proc(game: ^Game, level_idx: int)
 {
   game.level_cur = level_idx
-  level := game.levels[game.level_cur]
+  level := &game.levels[game.level_cur]
   start, start_ok := find_tile_start(level.tiles[:level.len])
+
   assert(start_ok, fmt.tprintf("start not found for assets.LEVEL[%v]", level_idx))
+
+  level.steps = 0
   game.player.pos = start.pos
+  game.player.prev_pos = {-1, -1}
   game.player.dir = .DOWN
   game.state = .PLAY
 }
@@ -123,7 +131,24 @@ gameplay_render :: proc(renderer: ^GFX_Renderer, game: ^Game, tick: u64)
     {
       render_sprite(renderer, tile.pos, tile.sprite)
     }
+    if game.player.dir == .LEFT
+    {
+      render_sprite(renderer, game.player.pos - Pos{1, 0}, .PLAYER_LEFT_FLAG)
+    }
+    else if game.player.dir == .RIGHT
+    {
+      render_sprite(renderer, game.player.pos + Pos{1, 0}, .PLAYER_RIGHT_FLAG)
+    }
     render_sprite(renderer, game.player.pos, .PLAYER)
+
+    sdtx.printf("steps: %v\n", level.steps)
+    sdtx.printf("\n")
+
+    for &text in level.text
+    {
+      sdtx.color3b(155, 255, 255)
+      sdtx.printf("%v\n", text)
+    }
   }
 }
 
@@ -137,7 +162,7 @@ gameplay_loop :: proc(game: ^Game)
   case .WIN:
 
   case .PLAY:
-    level := game.levels[game.level_cur]
+    level := &game.levels[game.level_cur]
 
     tiles := level.tiles[:level.len]
     cur_tile, cur_tile_ok := find_tile_pos(tiles, game.player.pos)
@@ -193,6 +218,7 @@ gameplay_loop :: proc(game: ^Game)
     }
 
     next_tile, next_tile_ok := find_tile_pos(tiles, next_pos)
+    next_tile_ok = next_tile_ok && next_tile.pos != game.player.prev_pos
 
     // the player moved to a valid tile
     if next_tile_ok
@@ -219,7 +245,7 @@ gameplay_loop :: proc(game: ^Game)
       }
     }
 
-    game.steps += 1
+    level.steps += 1
   }
 
   // drifting means we disregard the players direction and find the first available tile
@@ -231,7 +257,13 @@ gameplay_loop :: proc(game: ^Game)
       next_pos := game.player.pos + Dir_Vecs[dir]
 
       // we can't go backwards
-      if next_pos == game.player.prev_pos do continue
+      if next_pos == game.player.prev_pos
+      {
+        if .SLOW not_in game.player.effects
+        {
+          continue
+        }
+      }
 
       next_tile, next_tile_valid := find_tile_pos(tiles, next_pos)
       if next_tile_valid
@@ -241,14 +273,17 @@ gameplay_loop :: proc(game: ^Game)
       }
     }
 
-    assert(false, fmt.tprintf("player failed to drift in assets.LEVELS[%v] @ %v: %v", game.level_cur, game.player.pos))
+    assert(false, fmt.tprintf("player failed to drift in assets.LEVELS[%v] @ %v:", game.level_cur, game.player.pos))
 
     return {}, false
   }
 
   commit_move :: proc(to: ^Tile, player: ^Player)
   {
-    player.prev_pos = player.pos
+    if .SLOW not_in player.effects
+    {
+      player.prev_pos = player.pos
+    }
     player.pos = to.pos
 
     // drifting to a non-.TELEPORT tile resets the cooldown
@@ -257,6 +292,63 @@ gameplay_loop :: proc(game: ^Game)
       player.effects -= {.TELEPORT_COOLDOWN}
     }
   }
+}
+
+gameplay_handle_input :: proc(game: ^Game, input: Input, timer: ^Timer)
+{
+  switch game.state
+  {
+  case .MENU:
+    handle_menu_input(game, input)
+
+  case .WIN:
+    handle_win_input(game, input)
+
+  case .PLAY:
+    handle_play_input(game, input, timer)
+
+  }
+}
+
+@(private)
+handle_play_input :: proc(game: ^Game, input: Input, timer: ^Timer)
+{
+  if .LEFT in input.keys
+  {
+    game.player.dir = .LEFT
+  }
+  if .RIGHT in input.keys
+  {
+    game.player.dir = .RIGHT
+  }
+  if .DOWN in input.keys
+  {
+    game.player.dir = .DOWN
+  }
+
+  if .RESTART in input.keys
+  {
+    gameplay_start_level(&G.GAME, game.level_cur)
+  }
+
+  if .SPEEDUP in input.keys
+  {
+    timer.speed = 3
+  }
+  else
+  {
+    timer.speed = 1
+  }
+}
+
+@(private)
+handle_menu_input :: proc(game: ^Game, input: Input)
+{
+}
+
+@(private)
+handle_win_input :: proc(game: ^Game, input: Input)
+{
 }
 
 gameplay_win :: proc(game: ^Game)
@@ -292,6 +384,7 @@ parse_level :: proc(game: ^Game, level_idx: int)
   tile_id: Entity_Id
 
   level_asset := assets.LEVELS[level_idx]
+  level.text = level_asset.text
   level_png, level_png_err := png.load_from_bytes(data = level_asset.bytes, allocator = context.temp_allocator)
   if level_png_err != nil
   {

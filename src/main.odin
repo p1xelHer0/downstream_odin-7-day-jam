@@ -25,11 +25,12 @@ Game_Mem :: struct
 Key :: enum
 {
   NONE,
-  UP,
   DOWN,
   LEFT,
   RIGHT,
-  SPACE,
+  SPEEDUP,
+  RESTART,
+  CONTINUE,
 }
 
 Input :: struct
@@ -129,6 +130,7 @@ game_frame :: proc()
 {
   defer free_all(context.temp_allocator)
 
+
   // Timers
   @(static)
   timer_tick := TICK
@@ -136,6 +138,8 @@ game_frame :: proc()
   new_time := time.now()
   frame_time := time.duration_seconds(time.diff(G.TIMER.current, new_time))
   G.TIMER.current = new_time
+
+  gameplay_handle_input(&G.GAME, G.INPUT, &G.TIMER)
 
   timer_tick -= frame_time * f64(G.TIMER.speed)
   if timer_tick <= 0
@@ -159,9 +163,7 @@ game_frame :: proc()
 
   // Text rendering
   sdtx.color3b(155, 255, 255)
-  sdtx.printf("level: %v\n", G.GAME.level_cur)
-  sdtx.printf("%v\n", G.GAME.player.pos)
-  sdtx.printf("steps: %v\n", G.GAME.steps)
+  sdtx.printf("Level: %v\n", G.GAME.level_cur + 1)
 
   // Game rendering pass
   vertex_shader_uniforms := shaders.Vs_Params {
@@ -209,23 +211,15 @@ game_event :: proc(ev: ^sapp.Event)
     #partial switch ev.key_code
     {
     case .SPACE:
-      G.INPUT.keys += {.SPACE}
-      G.TIMER.speed = 3
-
-    case .W, .UP:
-      G.INPUT.keys += {.UP}
+      G.INPUT.keys += {.SPEEDUP}
     case .S, .DOWN:
       G.INPUT.keys += {.DOWN}
-      G.GAME.player.dir = .DOWN
     case .A, .LEFT:
       G.INPUT.keys += {.LEFT}
-      G.GAME.player.dir = .LEFT
     case .D, .RIGHT:
       G.INPUT.keys += {.RIGHT}
-      G.GAME.player.dir = .RIGHT
-
     case .R:
-      gameplay_start_level(&G.GAME, 0)
+      G.INPUT.keys += {.RESTART}
 
     case .F:
       sapp.toggle_fullscreen()
@@ -247,7 +241,7 @@ game_event :: proc(ev: ^sapp.Event)
     case .K:
       when ODIN_DEBUG
       {
-        gameplay_start_level(&G.GAME, (G.GAME.level_cur - 1) %% G.GAME.level_len)
+        gameplay_start_level(&G.GAME, (G.GAME.level_cur + 1) %% G.GAME.level_len)
       }
     }
   }
@@ -255,17 +249,7 @@ game_event :: proc(ev: ^sapp.Event)
   {
     #partial switch ev.key_code
     {
-    case .SPACE:
-      G.INPUT.keys -= {.SPACE}
-      G.TIMER.speed = 1
-
-    case .W, .UP:
-      G.INPUT.keys -= {.UP}
-      if G.INPUT.key_current == .UP
-      {
-        G.INPUT.key_current = nil
-      }
-
+    // Movement
     case .S, .DOWN:
       G.INPUT.keys -= {.DOWN}
       if G.INPUT.key_current == .DOWN
@@ -286,6 +270,20 @@ game_event :: proc(ev: ^sapp.Event)
       {
         G.INPUT.key_current = nil
       }
+
+    ////////////////////////////////////////
+
+    // Interactions
+    case .SPACE:
+      G.INPUT.keys -= {.SPEEDUP}
+
+    case .R:
+      G.INPUT.keys -= {.RESTART}
+      if G.INPUT.key_current == .RESTART
+      {
+        G.INPUT.key_current = nil
+      }
+
     }
   }
   else if ev.type == .MOUSE_DOWN
@@ -303,27 +301,6 @@ game_event :: proc(ev: ^sapp.Event)
   else if ev.type == .RESIZED
   {
     G.RENDERER.game.pixel_to_ndc = gfx_get_pixel_to_ndc(GAME_WIDTH, GAME_HEIGHT)
-  }
-}
-
-// Convert sokol_app event keycodes to our own keycodes
-sapp_keycode_to_key :: proc(keycode: sapp.Keycode) -> Maybe(Key)
-{
-  #partial switch keycode
-  {
-  case .SPACE:
-    return .SPACE
-  case .W, .UP:
-    return .UP
-  case .S, .DOWN:
-    return .DOWN
-  case .A, .LEFT:
-    return .LEFT
-  case .D, .RIGHT:
-    return .RIGHT
-
-  case:
-    return nil
   }
 }
 
