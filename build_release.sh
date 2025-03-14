@@ -23,12 +23,12 @@ case "$OS_NAME" in
     SOKOL_CLIBS_OS="macos"
     case "$OS_ARCH" in
       arm64)
-        EXE_NAME=$GAME_NAME-macOS-ARM64.bin
+        EXE_NAME=$GAME_NAME-macOS-ARM64
         SOKOL_SHDC_OS="osx_arm64"
         SOKOL_CLIBS_SUFFIX="arm64_metal_release.a"
         ;;
       *)
-        EXE_NAME=$GAME_NAME-macOS-x64.bin
+        EXE_NAME=$GAME_NAME-macOS-x64
         SOKOL_SHDC_OS="osx"
         SOKOL_CLIBS_SUFFIX="x64_release.a"
         ;;
