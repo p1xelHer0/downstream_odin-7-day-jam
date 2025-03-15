@@ -51,7 +51,7 @@ cp $ODIN_ROOT/core/sys/wasm/js/odin.js .
 
 files="./$EXE_NAME.wasm.o $SOKOL_ROOT/app/sokol_app_wasm_gl_release.a $SOKOL_ROOT/glue/sokol_glue_wasm_gl_release.a $SOKOL_ROOT/log/sokol_log_wasm_gl_release.a $SOKOL_ROOT/gfx/sokol_gfx_wasm_gl_release.a $SOKOL_ROOT/audio/sokol_audio_wasm_gl_release.a $SOKOL_ROOT/debugtext/sokol_debugtext_wasm_gl_release.a"
 
-flags="-sWASM_BIGINT -sWARN_ON_UNDEFINED_SYMBOLS=0 -sMAX_WEBGL_VERSION=2 -sASSERTIONS --shell-file ../../src/main_web/index.html"
+flags="-sWASM_BIGINT -sWARN_ON_UNDEFINED_SYMBOLS=0 -sMAX_WEBGL_VERSION=2 -sASSERTIONS -sALLOW_MEMORY_GROWTH --shell-file ../../src/main_web/index.html"
 
 emcc -o ./index.html $files $flags
 # emcc -og ./index.html $files $flags

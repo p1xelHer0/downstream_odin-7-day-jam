@@ -73,9 +73,9 @@ $SOKOL_SHDC_PATH -i src/shaders/shader.glsl -o src/shaders/shader.glsl.odin -l "
 
 # Build release
 rm -rf $OUT_DIR && mkdir -p $OUT_DIR && cd $OUT_DIR
-# odin build ../../src/main_release -out=$EXE_NAME -vet -o:speed -no-bounds-check -show-timings
+odin build ../../src/main_release -out=$EXE_NAME -vet -o:speed -no-bounds-check -show-timings
 # odin build ../../src/main_release -out=$EXE_NAME -vet -o:speed -no-bounds-check -show-timings -define:USE_TRACKING_ALLOCATOR=true
-odin build ../../src/main_release -out=$EXE_NAME -vet -debug -show-timings -define:USE_TRACKING_ALLOCATOR=true
+# odin build ../../src/main_release -out=$EXE_NAME -vet -debug -show-timings -define:USE_TRACKING_ALLOCATOR=true
 
 if [ $# -ge 1 ] && [ $1 == "run" ]; then
   ./$EXE_NAME
