@@ -140,3 +140,5 @@ LEVELS := [?]Level {
     },
   },
 }
+
+ICON :: #load("icon.png")

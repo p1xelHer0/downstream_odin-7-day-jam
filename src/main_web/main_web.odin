@@ -19,7 +19,7 @@ main :: proc()
 
   g_ctx = context
 
-  app_desc := game.game_app_desc()
+  app_desc, _ := game.game_app_desc()
   app_desc.init_cb = init
   app_desc.frame_cb = frame
   app_desc.event_cb = event

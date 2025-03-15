@@ -1,6 +1,9 @@
 package game
 
+// import "core:c"
 import "core:fmt"
+// import "core:image/png"
+// import "core:slice"
 import "core:time"
 
 import sapp "third_party/sokol-odin/sokol/app"
@@ -58,19 +61,40 @@ HOT_RELOAD :: #config(HOT_RELOAD, false) && ODIN_DEBUG
 G: ^Game_Mem
 
 @(export)
-game_app_desc :: proc() -> sapp.Desc
+game_app_desc :: proc() -> (sapp.Desc, bool)
 {
   window_title: cstring = "hot!" when HOT_RELOAD else GAME_NAME
+
+  // FIXME: proper icon
+  // game_icon, game_icon_ok := png.load_from_bytes(assets.ICON, allocator = context.temp_allocator)
+  // if game_icon_ok != nil
+  // {
+  //   fmt.eprintfln("failed to load_from_bytes from assets.ICON: %v", game_icon_ok)
+  //   return {}, false
+  // }
+  //
+  // game_icon_desc := sapp.Icon_Desc {
+  //   images = {
+  //     0 = sapp.Image_Desc{
+  //       width = i32(game_icon.width),
+  //       height = i32(game_icon.height),
+  //       pixels = sapp.Range{
+  //         ptr = raw_data(game_icon.pixels.buf),
+  //         size = c.size_t(slice.size(game_icon.pixels.buf[:]))
+  //       }
+  //     }
+  //   },
+  // }
 
   return {
     width = 320,
     height = 180,
     sample_count = 4,
     window_title = window_title,
-    icon = { sokol_default = true },
+    // icon = game_icon_desc,
     logger = { func = slog.func },
     high_dpi = true,
-  }
+  }, true
 }
 
 @(export)
