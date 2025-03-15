@@ -146,6 +146,26 @@ LEVELS := [?]Level {
       "  path is deadly...",
     },
   },
+  {
+    bytes = #load("level_6.png"),
+    text = {
+      "- You might not know",
+      "  where to go...",
+    },
+  },
+  {
+    bytes = #load("level_7.png"),
+    text = {
+      "- You might need",
+      "  to be quick!",
+    },
+  },
+  {
+    bytes = #load("level_8.png"),
+    text = {
+      "Good luck!",
+    },
+  },
 }
 
 ICON :: #load("icon.png")

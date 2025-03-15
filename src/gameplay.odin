@@ -84,12 +84,11 @@ Tile :: struct
 }
 
 Dir_Vecs := [Dir][2]int {
-  .UP    = { 0, -1},
   .DOWN  = { 0,  1},
   .LEFT  = {-1,  0},
   .RIGHT = { 1,  0},
+  .UP    = { 0, -1},
 }
-Dirs :: bit_set[Dir;u8]
 
 gameplay_init :: proc(game: ^Game)
 {
@@ -332,7 +331,7 @@ gameplay_loop :: proc(game: ^Game, input: ^Input)
   // drifting means we disregard the players direction and find the first available tile
   drift :: proc(tiles: []Tile, game: ^Game) -> (^Tile, bool)
   {
-    dirs: Dirs = {.DOWN, .LEFT, .RIGHT, .UP}
+    dirs := [4]Dir{.DOWN, .LEFT, .RIGHT, .UP}
     for dir in dirs
     {
       next_pos := game.player.pos + Dir_Vecs[dir]
@@ -366,6 +365,8 @@ gameplay_loop :: proc(game: ^Game, input: ^Input)
     {
       player.prev_pos = player.pos
     }
+
+    fmt.printfln("commit to file: %v", to.pos)
     player.pos = to.pos
 
     // drifting to a non-.TELEPORT tile resets the cooldown
