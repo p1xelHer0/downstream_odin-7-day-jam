@@ -100,6 +100,17 @@ gameplay_init :: proc(game: ^Game)
   }
 }
 
+gameplay_restart_game :: proc(game: ^Game)
+{
+  game.level_cur = 0
+  for &level in game.levels[:game.level_len]
+  {
+    level.steps = 0
+  }
+
+  gameplay_start_level(&G.GAME, game.level_cur)
+}
+
 gameplay_start_level :: proc(game: ^Game, level_idx: int)
 {
   game.level_cur = level_idx
@@ -120,9 +131,35 @@ gameplay_render :: proc(renderer: ^GFX_Renderer, game: ^Game, tick: u64)
   switch game.state
   {
   case .MENU:
+    level := game.levels[game.level_cur]
+    level_cur_text := game.level_cur + 1
+    sdtx.printf("You completed level %v in %v steps!\n\n", level_cur_text, level.steps)
+    sdtx.printf("- <RETURN> to start the next level\n")
+    sdtx.printf("- <R> try it again\n\n\n")
+    if game.level_cur < 3
+    {
+      sdtx.printf("Hint: You can press <R> at any time\nduring the level to restart\n\n")
+      sdtx.printf("Hint: You can press <ESC> at any time\nto restart the whole game")
+    }
 
   case .WIN:
-    render_sprite(renderer, {18, 11}, .WIN, scale = {4, 4})
+    steps_total := 0
+    for level in game.levels {
+      steps_total += level.steps
+    }
+    sdtx.printf("You made it down the stream in\n%v steps!\n", steps_total)
+
+    sdtx.printf("\n- <R> try it again")
+
+    render_sprite(renderer, {18, 7}, .WIN, scale = {4, 4})
+
+    sdtx.printf("\n\n\n\n\n\n\n\n\n")
+    sdtx.printf("Made with Odin and Sokol\nfor the Odin 7 Day Jam\n\n")
+    sdtx.printf("- odin-lang.org\n")
+    sdtx.printf("- github.com/floooh/sokol\n")
+
+    sdtx.printf("\n\n")
+    sdtx.printf("- p1xelHer0.itch.io/downstream")
 
   case .PLAY:
     level := game.levels[game.level_cur]
@@ -141,8 +178,7 @@ gameplay_render :: proc(renderer: ^GFX_Renderer, game: ^Game, tick: u64)
     }
     render_sprite(renderer, game.player.pos, .PLAYER)
 
-    sdtx.printf("steps: %v\n", level.steps)
-    sdtx.printf("\n")
+    sdtx.printf("Level: %v\nSteps: %v\n\n", game.level_cur + 1, level.steps)
 
     for &text in level.text
     {
@@ -152,12 +188,11 @@ gameplay_render :: proc(renderer: ^GFX_Renderer, game: ^Game, tick: u64)
   }
 }
 
-gameplay_loop :: proc(game: ^Game)
+gameplay_loop :: proc(game: ^Game, input: ^Input)
 {
   switch game.state
   {
   case .MENU:
-    game.state = .PLAY
 
   case .WIN:
 
@@ -181,7 +216,7 @@ gameplay_loop :: proc(game: ^Game)
       }
       else
       {
-        gameplay_start_level(game, next_level)
+        game.state = .MENU
         break
       }
     }
@@ -296,6 +331,11 @@ gameplay_loop :: proc(game: ^Game)
 
 gameplay_handle_input :: proc(game: ^Game, input: Input, timer: ^Timer)
 {
+  if .ESC in input.keys
+  {
+    gameplay_restart_game(game)
+  }
+
   switch game.state
   {
   case .MENU:
@@ -326,12 +366,12 @@ handle_play_input :: proc(game: ^Game, input: Input, timer: ^Timer)
     game.player.dir = .DOWN
   }
 
-  if .RESTART in input.keys
+  if .R in input.keys
   {
     gameplay_start_level(&G.GAME, game.level_cur)
   }
 
-  if .SPEEDUP in input.keys
+  if .SPACE in input.keys
   {
     timer.speed = 3
   }
@@ -344,11 +384,24 @@ handle_play_input :: proc(game: ^Game, input: Input, timer: ^Timer)
 @(private)
 handle_menu_input :: proc(game: ^Game, input: Input)
 {
+  if .RETURN in input.keys
+  {
+    gameplay_start_level(game, game.level_cur + 1)
+  }
+
+  if .R in input.keys
+  {
+    gameplay_start_level(&G.GAME, game.level_cur)
+  }
 }
 
 @(private)
 handle_win_input :: proc(game: ^Game, input: Input)
 {
+  if .R in input.keys
+  {
+    gameplay_restart_game(game)
+  }
 }
 
 gameplay_win :: proc(game: ^Game)
@@ -360,7 +413,6 @@ gameplay_win :: proc(game: ^Game)
 gameplay_hot_reloaded :: proc(game: ^Game)
 {
   gameplay_init(game)
-  gameplay_start_level(game, game.level_cur)
 }
 
 @(private)
@@ -455,7 +507,7 @@ parse_level :: proc(game: ^Game, level_idx: int)
         tile.kind += {.CROSSING}
         tile.sprite = .CROSSING
       }
-      else if pixel == {255, 0, 0, 255}
+      else if pixel == {0, 255, 0, 255}
       {
         assert(!goal_set, fmt.tprintf("multiple goals found in assets.LEVELS[%v]", level_idx))
         goal_set = true

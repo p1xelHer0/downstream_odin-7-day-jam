@@ -15,6 +15,8 @@ QUAD_INDEX_SIZE :: 6
 GAME_PIXEL_FORMAT :: sg.Pixel_Format.RGBA8
 GAME_SAMPLE_COUNT :: 1
 
+CLEAR_COLOR :: sg.Color{14.0 / 255.0, 4.0 / 255.0, 37.0 / 255.0, 1}
+
 Sprite_Shader :: struct
 {
   location: [2]f32,
@@ -108,7 +110,7 @@ gfx_init :: proc(renderer: ^GFX_Renderer) -> bool
   game_pass := sg.Pass {
     attachments = game_pass_attachments,
     action = {
-      colors = {0 = {load_action = .CLEAR, clear_value = sg.Color{14.0 / 255.0, 4.0 / 255.0, 37.0 / 255.0, 1}}},
+      colors = {0 = {load_action = .CLEAR, clear_value = CLEAR_COLOR}},
     },
     label = "game-pass",
   }
@@ -184,19 +186,14 @@ gfx_init :: proc(renderer: ^GFX_Renderer) -> bool
   // Swapchain renderer resources
 
   swapchain_pass_action: sg.Pass_Action
-  swapchain_pass_action.colors[0] = {
-    load_action = .CLEAR,
-    clear_value = {r = 0, g = 0, b = 0, a = 0},
-  }
+  swapchain_pass_action.colors[0] = { load_action = .CLEAR, clear_value = CLEAR_COLOR }
 
-  // odinfmt: disable
   quad_vertices := [16]f32{
     +1, +1,   1, 1,
     +1, -1,   1, 0,
     -1, -1,   0, 0,
     -1, +1,   0, 1,
   }
-  // odinfmt: enable
   swapchain_vertex_buffer := sg.make_buffer({type = .VERTEXBUFFER, data = as_range(&quad_vertices), label = "swapchain-vertex-buffer"})
 
   swapchain_index_buffer_vertex := [QUAD_INDEX_SIZE]u16{0, 1, 3, 1, 2, 3}

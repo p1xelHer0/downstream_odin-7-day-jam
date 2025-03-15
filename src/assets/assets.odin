@@ -115,23 +115,23 @@ LEVELS := [?]Level {
     text = {
       "- Steer in crossings with:",
       "",
-      "  A/Left",
-      "  D/Right",
-      "  S/Down",
+      "  <A/Left>",
+      "  <D/Right>",
+      "  <S/Down>",
     },
   },
   {
     bytes = #load("level_3.png"),
     text = {
-      "- Some water slows you down,",
-      "- Other speeds you up",
+      "- Some water slows you down",
+      "- Other speed you up",
     },
   },
 
   {
     bytes = #load("level_4.png"),
     text = {
-      "- Some tiles are magical",
+      "- Some spots are magical",
     },
   },
   {

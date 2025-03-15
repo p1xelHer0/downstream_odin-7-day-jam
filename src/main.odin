@@ -28,15 +28,15 @@ Key :: enum
   DOWN,
   LEFT,
   RIGHT,
-  SPEEDUP,
-  RESTART,
-  CONTINUE,
+  R,
+  SPACE,
+  RETURN,
+  ESC,
 }
 
 Input :: struct
 {
-  key_current: Maybe(Key),
-  keys:        bit_set[Key],
+  keys: bit_set[Key],
 }
 
 Timer :: struct
@@ -99,7 +99,7 @@ game_init :: proc()
   })
 
   sdtx.canvas(GAME_WIDTH, GAME_HEIGHT)
-  sdtx.origin(0, 0)
+  sdtx.origin(1, 1)
   sdtx.font(0)
 
   gfx_init_success := gfx_init(&G.RENDERER)
@@ -147,7 +147,7 @@ game_frame :: proc()
     G.TIMER.tick += 1
     timer_tick += TICK
 
-    gameplay_loop(&G.GAME)
+    gameplay_loop(&G.GAME, &G.INPUT)
   }
 
   // Sprite batch
@@ -161,9 +161,6 @@ game_frame :: proc()
     sg.update_buffer(G.RENDERER.game.bindings.vertex_buffers[1], as_range(sprite_batch))
   }
 
-  // Text rendering
-  sdtx.color3b(155, 255, 255)
-  sdtx.printf("Level: %v\n", G.GAME.level_cur + 1)
 
   // Game rendering pass
   vertex_shader_uniforms := shaders.Vs_Params {
@@ -210,16 +207,29 @@ game_event :: proc(ev: ^sapp.Event)
   {
     #partial switch ev.key_code
     {
-    case .SPACE:
-      G.INPUT.keys += {.SPEEDUP}
     case .S, .DOWN:
       G.INPUT.keys += {.DOWN}
+
     case .A, .LEFT:
       G.INPUT.keys += {.LEFT}
+
     case .D, .RIGHT:
       G.INPUT.keys += {.RIGHT}
+
+    ////////////////////////////////////////
+
+    // Interactions
+    case .SPACE:
+      G.INPUT.keys += {.SPACE}
+
+    case .ENTER:
+      G.INPUT.keys += {.RETURN}
+
+    case .ESCAPE:
+      G.INPUT.keys += {.ESC}
+
     case .R:
-      G.INPUT.keys += {.RESTART}
+      G.INPUT.keys += {.R}
 
     case .F:
       sapp.toggle_fullscreen()
@@ -252,37 +262,27 @@ game_event :: proc(ev: ^sapp.Event)
     // Movement
     case .S, .DOWN:
       G.INPUT.keys -= {.DOWN}
-      if G.INPUT.key_current == .DOWN
-      {
-        G.INPUT.key_current = nil
-      }
 
     case .A, .LEFT:
       G.INPUT.keys -= {.LEFT}
-      if G.INPUT.key_current == .LEFT
-      {
-        G.INPUT.key_current = nil
-      }
 
     case .D, .RIGHT:
       G.INPUT.keys -= {.RIGHT}
-      if G.INPUT.key_current == .RIGHT
-      {
-        G.INPUT.key_current = nil
-      }
 
     ////////////////////////////////////////
 
     // Interactions
     case .SPACE:
-      G.INPUT.keys -= {.SPEEDUP}
+      G.INPUT.keys -= {.SPACE}
+
+    case .ENTER:
+      G.INPUT.keys -= {.RETURN}
+
+    case .ESCAPE:
+      G.INPUT.keys -= {.ESC}
 
     case .R:
-      G.INPUT.keys -= {.RESTART}
-      if G.INPUT.key_current == .RESTART
-      {
-        G.INPUT.key_current = nil
-      }
+      G.INPUT.keys -= {.R}
 
     }
   }
