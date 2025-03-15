@@ -391,14 +391,14 @@ handle_play_input :: proc(game: ^Game, input: Input, timer: ^Timer)
     gameplay_start_level(&G.GAME, game.level_cur)
   }
 
-  if .SPACE in input.keys
-  {
-    timer.speed = 3
-  }
-  else
-  {
-    timer.speed = 1
-  }
+  // if .SPACE in input.keys
+  // {
+  //   timer.speed = 3
+  // }
+  // else
+  // {
+  //   timer.speed = 1
+  // }
 }
 
 @(private)
