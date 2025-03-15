@@ -154,8 +154,9 @@ gameplay_render :: proc(renderer: ^GFX_Renderer, game: ^Game, tick: u64)
     sdtx.printf("You made it down the stream in\n%v steps!\n", steps_total)
 
     sdtx.printf("\n- <R> to play again")
+    sdtx.printf("\n\n\n\n\n\n              DOWNSTREAM")
 
-    sdtx.printf("\n\n\n\n\n\n\n\n\n")
+    sdtx.printf("\n\n\n\n\n\n")
     sdtx.printf("Made with Odin and Sokol\nfor the Odin 7 Day Jam\n\n")
     sdtx.printf("- odin-lang.org\n")
     sdtx.printf("- github.com/floooh/sokol\n")
