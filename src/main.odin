@@ -333,8 +333,6 @@ game_cleanup :: proc()
 {
   sdtx.shutdown()
   sg.shutdown()
-
-  // free(G)
 }
 
 @(export)

@@ -45,6 +45,7 @@ Sprite_Name :: enum
   BOOST,
   SLOW,
   TELEPORT,
+  DEATH,
   GOAL,
   WIN,
 }
@@ -80,6 +81,10 @@ SPRITE := #partial [Sprite_Name]Sprite {
   },
   .SLOW = {
     location = [2]int{1, 4},
+    size     = ATLAS_TILE,
+  },
+  .DEATH = {
+    location = [2]int{4, 2},
     size     = ATLAS_TILE,
   },
   .TELEPORT = {
@@ -137,6 +142,8 @@ LEVELS := [?]Level {
   {
     bytes = #load("level_5.png"),
     text = {
+      "- Sometime the fastest",
+      "  path is deadly...",
     },
   },
 }

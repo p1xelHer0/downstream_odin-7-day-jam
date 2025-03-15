@@ -22,6 +22,7 @@ Game_State :: enum
 {
   MENU,
   PLAY,
+  DEAD,
   WIN,
 }
 
@@ -68,6 +69,7 @@ Tile_Kind :: enum
   START,
   BOOST,
   SLOW,
+  DEATH,
   TELEPORT,
   GOAL,
 }
@@ -128,6 +130,8 @@ gameplay_start_level :: proc(game: ^Game, level_idx: int)
 
 gameplay_render :: proc(renderer: ^GFX_Renderer, game: ^Game, tick: u64)
 {
+  text_default_color()
+
   switch game.state
   {
   case .MENU:
@@ -149,9 +153,7 @@ gameplay_render :: proc(renderer: ^GFX_Renderer, game: ^Game, tick: u64)
     }
     sdtx.printf("You made it down the stream in\n%v steps!\n", steps_total)
 
-    sdtx.printf("\n- <R> try it again")
-
-    render_sprite(renderer, {18, 7}, .WIN, scale = {4, 4})
+    sdtx.printf("\n- <R> to play again")
 
     sdtx.printf("\n\n\n\n\n\n\n\n\n")
     sdtx.printf("Made with Odin and Sokol\nfor the Odin 7 Day Jam\n\n")
@@ -160,6 +162,14 @@ gameplay_render :: proc(renderer: ^GFX_Renderer, game: ^Game, tick: u64)
 
     sdtx.printf("\n\n")
     sdtx.printf("- p1xelHer0.itch.io/downstream")
+
+  case .DEAD:
+    text_dead_color()
+    level := game.levels[game.level_cur]
+    level_cur_text := game.level_cur + 1
+    sdtx.printf("You died on level %v!\n\n\n", level_cur_text)
+    text_default_color()
+    sdtx.printf("- <R> try it again")
 
   case .PLAY:
     level := game.levels[game.level_cur]
@@ -182,7 +192,6 @@ gameplay_render :: proc(renderer: ^GFX_Renderer, game: ^Game, tick: u64)
 
     for &text in level.text
     {
-      sdtx.color3b(155, 255, 255)
       sdtx.printf("%v\n", text)
     }
   }
@@ -195,6 +204,8 @@ gameplay_loop :: proc(game: ^Game, input: ^Input)
   case .MENU:
 
   case .WIN:
+
+  case .DEAD:
 
   case .PLAY:
     level := &game.levels[game.level_cur]
@@ -219,6 +230,13 @@ gameplay_loop :: proc(game: ^Game, input: ^Input)
         game.state = .MENU
         break
       }
+    }
+
+    // death-con!
+    if .DEATH in cur_tile.kind
+    {
+      game.state = .DEAD
+      break
     }
 
     ////////////////////////////////////////
@@ -341,6 +359,9 @@ gameplay_handle_input :: proc(game: ^Game, input: Input, timer: ^Timer)
   case .MENU:
     handle_menu_input(game, input)
 
+  case .DEAD:
+    handle_dead_input(game, input)
+
   case .WIN:
     handle_win_input(game, input)
 
@@ -396,6 +417,15 @@ handle_menu_input :: proc(game: ^Game, input: Input)
 }
 
 @(private)
+handle_dead_input :: proc(game: ^Game, input: Input)
+{
+  if .R in input.keys
+  {
+    gameplay_start_level(&G.GAME, game.level_cur)
+  }
+}
+
+@(private)
 handle_win_input :: proc(game: ^Game, input: Input)
 {
   if .R in input.keys
@@ -406,7 +436,6 @@ handle_win_input :: proc(game: ^Game, input: Input)
 
 gameplay_win :: proc(game: ^Game)
 {
-  fmt.printfln("you is a winner!")
   game.state = .WIN
 }
 
@@ -427,6 +456,18 @@ render_sprite :: proc(renderer: ^GFX_Renderer, pos: Pos, sprite: assets.Sprite_N
     location = sprite_data.location,
     scale = scale,
   )
+}
+
+@(private)
+text_default_color :: proc()
+{
+  sdtx.color3b(155, 255, 255)
+}
+
+@(private)
+text_dead_color :: proc()
+{
+  sdtx.color3b(255, 0, 0)
 }
 
 @(private)
@@ -506,6 +547,11 @@ parse_level :: proc(game: ^Game, level_idx: int)
       {
         tile.kind += {.CROSSING}
         tile.sprite = .CROSSING
+      }
+      else if pixel == {255, 0, 0, 255}
+      {
+        tile.kind += {.DEATH}
+        tile.sprite = .DEATH
       }
       else if pixel == {0, 255, 0, 255}
       {
