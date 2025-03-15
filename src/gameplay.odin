@@ -31,7 +31,6 @@ Game :: struct
   state:     Game_State,
 
   player:    Player,
-  steps:     int,
 
   levels:    [BUDGET_GAMEPLAY_LEVELS]Level,
   level_cur: int,
@@ -54,10 +53,11 @@ Player_Effect :: enum
 
 Level :: struct
 {
-  tiles: [BUDGET_GAMEPLAY_TILES]Tile,
-  len:   int,
-  text:  []string,
-  steps: int,
+  tiles:  [BUDGET_GAMEPLAY_TILES]Tile,
+  len:    int,
+  text:   []string,
+  steps:  int,
+  deaths: int,
 }
 
 Entity_Id :: distinct u32
@@ -108,73 +108,109 @@ gameplay_restart_game :: proc(game: ^Game)
   for &level in game.levels[:game.level_len]
   {
     level.steps = 0
+    level.deaths = 0
   }
 
-  gameplay_start_level(&G.GAME, game.level_cur)
+  gameplay_start_level(game, game.level_cur)
 }
 
 gameplay_start_level :: proc(game: ^Game, level_idx: int)
 {
-  game.level_cur = level_idx
-  level := &game.levels[game.level_cur]
-  start, start_ok := find_tile_start(level.tiles[:level.len])
+  // we made it though all the levels, we won!
+  if level_idx == len(assets.LEVELS)
+  {
+    game.state = .WIN
+  }
+  else
+  {
+    game.level_cur = level_idx
+    level := &game.levels[game.level_cur]
+    start, start_ok := find_tile_start(level.tiles[:level.len])
 
-  assert(start_ok, fmt.tprintf("start not found for assets.LEVEL[%v]", level_idx))
+    assert(start_ok, fmt.tprintf("start not found for assets.LEVEL[%v]", level_idx))
 
-  level.steps = 0
-  game.player.pos = start.pos
-  game.player.prev_pos = {-1, -1}
-  game.player.dir = .DOWN
-  game.state = .PLAY
+    level.steps = 0
+    game.player.pos = start.pos
+    game.player.prev_pos = {-1, -1}
+    game.player.dir = .DOWN
+    game.state = .PLAY
+  }
 }
 
 gameplay_render :: proc(renderer: ^GFX_Renderer, game: ^Game, tick: u64)
 {
   text_default_color()
 
+  level_cur := game.levels[game.level_cur]
+  level_cur_text := game.level_cur + 1
+  steps_total := 0
+  deaths_total := 0
+  for &level in game.levels[:game.level_len] {
+    steps_total += level.steps
+    deaths_total += level.deaths
+  }
+
   switch game.state
   {
   case .MENU:
-    level := game.levels[game.level_cur]
-    level_cur_text := game.level_cur + 1
-    sdtx.printf("You completed level %v in %v steps!\n\n", level_cur_text, level.steps)
+    sdtx.printf("You completed level %v in ", level_cur_text)
+    text_contrast_color()
+    sdtx.printf("<%v steps>\n\n", level_cur.steps)
+    text_default_color()
     sdtx.printf("- <RETURN> to start the next level\n")
     sdtx.printf("- <R> try it again\n\n\n")
-    if game.level_cur < 3
+    if game.level_cur < 2
     {
       sdtx.printf("Hint: You can press <R> at any time\nduring the level to restart\n\n")
       sdtx.printf("Hint: You can press <ESC> at any time\nto restart the whole game")
     }
 
   case .WIN:
-    steps_total := 0
-    for level in game.levels {
-      steps_total += level.steps
+    sdtx.printf("You made it down the stream in:\n")
+    text_contrast_color()
+    sdtx.printf("<%v steps>", steps_total)
+    text_default_color()
+    sdtx.printf("\n\n")
+
+    if deaths_total > 0
+    {
+      sdtx.printf("You died:\n")
+      text_dead_color()
+      sdtx.printf("<%v ", deaths_total)
+      if deaths_total == 1
+      {
+        sdtx.printf("time>")
+      }
+      else
+      {
+        sdtx.printf("times>")
+      }
+      text_default_color()
+      sdtx.printf("\n\n")
     }
-    sdtx.printf("You made it down the stream in\n%v steps!\n", steps_total)
+    else
+    {
+      sdtx.printf("You didn't die a single time!\n\n\n")
+    }
 
     sdtx.printf("\n- <R> to play again")
-    sdtx.printf("\n\n\n\n\n\n              DOWNSTREAM")
 
-    sdtx.printf("\n\n\n\n\n\n")
+    sdtx.printf("\n\n\n\n              DOWNSTREAM\n")
+    sdtx.printf("     p1xelHer0.itch.io/downstream")
+
+    sdtx.printf("\n\n\n\n")
     sdtx.printf("Made with Odin and Sokol\nfor the Odin 7 Day Jam\n\n")
     sdtx.printf("- odin-lang.org\n")
     sdtx.printf("- github.com/floooh/sokol\n")
 
-    sdtx.printf("\n\n")
-    sdtx.printf("- p1xelHer0.itch.io/downstream")
-
   case .DEAD:
     text_dead_color()
-    level_cur_text := game.level_cur + 1
     sdtx.printf("You died on level %v!\n\n\n", level_cur_text)
     text_default_color()
     sdtx.printf("- <R> try it again")
 
   case .PLAY:
-    level := game.levels[game.level_cur]
-
-    for &tile in level.tiles[:level.len]
+    for &tile in level_cur.tiles[:level_cur.len]
     {
       render_sprite(renderer, tile.pos, tile.sprite)
     }
@@ -188,9 +224,9 @@ gameplay_render :: proc(renderer: ^GFX_Renderer, game: ^Game, tick: u64)
     }
     render_sprite(renderer, game.player.pos, .PLAYER)
 
-    sdtx.printf("Level: %v\nSteps: %v\n\n", game.level_cur + 1, level.steps)
+    sdtx.printf("Level: %v\nSteps: %v\n\n", game.level_cur + 1, level_cur.steps)
 
-    for &text in level.text
+    for &text in level_cur.text
     {
       sdtx.printf("%v\n", text)
     }
@@ -219,22 +255,14 @@ gameplay_loop :: proc(game: ^Game, input: ^Input)
     // win-con!
     if .GOAL in cur_tile.kind
     {
-      next_level := game.level_cur + 1
-      if next_level == len(assets.LEVELS)
-      {
-        gameplay_win(game)
-        break
-      }
-      else
-      {
-        game.state = .MENU
-        break
-      }
+      game.state = .MENU
+      break
     }
 
     // death-con!
     if .DEATH in cur_tile.kind
     {
+      level.deaths += 1
       game.state = .DEAD
       break
     }
@@ -333,6 +361,7 @@ gameplay_loop :: proc(game: ^Game, input: ^Input)
 
   commit_move :: proc(to: ^Tile, player: ^Player)
   {
+    // NOTE: kinda wonky but stepping on the slow TILE is technically just us stepping on the same TILE twice - hence a slowdown
     if .SLOW not_in player.effects
     {
       player.prev_pos = player.pos
@@ -371,7 +400,7 @@ gameplay_handle_input :: proc(game: ^Game, input: Input, timer: ^Timer)
   }
 }
 
-@(private)
+@(private="file")
 handle_play_input :: proc(game: ^Game, input: Input, timer: ^Timer)
 {
   if .LEFT in input.keys
@@ -389,20 +418,23 @@ handle_play_input :: proc(game: ^Game, input: Input, timer: ^Timer)
 
   if .R in input.keys
   {
-    gameplay_start_level(&G.GAME, game.level_cur)
+    gameplay_start_level(game, game.level_cur)
   }
 
-  // if .SPACE in input.keys
-  // {
-  //   timer.speed = 3
-  // }
-  // else
-  // {
-  //   timer.speed = 1
-  // }
+  if ODIN_DEBUG
+  {
+    if .SPACE in input.keys
+    {
+      timer.speed = 10
+    }
+    else
+    {
+      timer.speed = 1
+    }
+  }
 }
 
-@(private)
+@(private="file")
 handle_menu_input :: proc(game: ^Game, input: Input)
 {
   if .RETURN in input.keys
@@ -412,20 +444,20 @@ handle_menu_input :: proc(game: ^Game, input: Input)
 
   if .R in input.keys
   {
-    gameplay_start_level(&G.GAME, game.level_cur)
+    gameplay_start_level(game, game.level_cur)
   }
 }
 
-@(private)
+@(private="file")
 handle_dead_input :: proc(game: ^Game, input: Input)
 {
   if .R in input.keys
   {
-    gameplay_start_level(&G.GAME, game.level_cur)
+    gameplay_start_level(game, game.level_cur)
   }
 }
 
-@(private)
+@(private="file")
 handle_win_input :: proc(game: ^Game, input: Input)
 {
   if .R in input.keys
@@ -434,17 +466,7 @@ handle_win_input :: proc(game: ^Game, input: Input)
   }
 }
 
-gameplay_win :: proc(game: ^Game)
-{
-  game.state = .WIN
-}
-
-gameplay_hot_reloaded :: proc(game: ^Game)
-{
-  gameplay_init(game)
-}
-
-@(private)
+@(private="file")
 render_sprite :: proc(renderer: ^GFX_Renderer, pos: Pos, sprite: assets.Sprite_Name, scale := [2]int{1, 1})
 {
   sprite_data := assets.SPRITE[sprite]
@@ -458,19 +480,25 @@ render_sprite :: proc(renderer: ^GFX_Renderer, pos: Pos, sprite: assets.Sprite_N
   )
 }
 
-@(private)
+@(private="file")
 text_default_color :: proc()
 {
   sdtx.color3b(155, 255, 255)
 }
 
-@(private)
+@(private="file")
+text_contrast_color :: proc()
+{
+  sdtx.color3b(251, 242, 54)
+}
+
+@(private="file")
 text_dead_color :: proc()
 {
   sdtx.color3b(255, 0, 0)
 }
 
-@(private)
+@(private="file")
 parse_level :: proc(game: ^Game, level_idx: int)
 {
   level: Level
@@ -602,7 +630,7 @@ parse_level :: proc(game: ^Game, level_idx: int)
   game.levels[level_idx] = level
 }
 
-@(private, require_results)
+@(private="file", require_results)
 find_tile_id :: proc(tiles: []Tile, id: Entity_Id) -> (^Tile, bool)
 {
   for &tile in tiles
@@ -612,7 +640,7 @@ find_tile_id :: proc(tiles: []Tile, id: Entity_Id) -> (^Tile, bool)
   return {}, false
 }
 
-@(private, require_results)
+@(private="file", require_results)
 find_tile_start :: proc(tiles: []Tile) -> (^Tile, bool)
 {
   for &tile in tiles
@@ -622,7 +650,7 @@ find_tile_start :: proc(tiles: []Tile) -> (^Tile, bool)
   return {}, false
 }
 
-@(private, require_results)
+@(private="file", require_results)
 find_tile_goal :: proc(tiles: []Tile) -> (^Tile, bool)
 {
   for &tile in tiles
@@ -632,7 +660,7 @@ find_tile_goal :: proc(tiles: []Tile) -> (^Tile, bool)
   return {}, false
 }
 
-@(private, require_results)
+@(private="file", require_results)
 find_tile_pos :: proc(tiles: []Tile, pos: Pos) -> (^Tile, bool)
 {
   for &tile in tiles
@@ -642,7 +670,7 @@ find_tile_pos :: proc(tiles: []Tile, pos: Pos) -> (^Tile, bool)
   return {}, false
 }
 
-@(private, require_results)
+@(private="file", require_results)
 has_tile :: proc(tiles: []Tile, pos: Pos) -> bool
 {
   for &tile in tiles
@@ -650,4 +678,9 @@ has_tile :: proc(tiles: []Tile, pos: Pos) -> bool
     if tile.pos == pos do return true
   }
   return false
+}
+
+gameplay_hot_reloaded :: proc(game: ^Game)
+{
+  gameplay_init(game)
 }
