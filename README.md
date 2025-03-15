@@ -1,6 +1,6 @@
 ![BANNER](https://github.com/user-attachments/assets/ccac1457-489b-49d9-8538-824f4e644e53)
 
-A small game made for the [Odin 7 Day](https://itch.io/jam/odin-7-day-jam) Jam
+A small (my first) game made for the [Odin 7 Day Jam](https://itch.io/jam/odin-7-day-jam)
 
 > How fast can you make it down the stream?
 
