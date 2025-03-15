@@ -4,7 +4,7 @@ set -eou pipefail
 
 OUT_DIR="./build/release"
 
-GAME_NAME="odin-7-day-jam"
+GAME_NAME="downstream"
 
 OS_NAME=$(uname -s)
 OS_ARCH=$(uname -m)

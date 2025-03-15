@@ -6,7 +6,7 @@ ODIN_ROOT=$(odin root)
 
 OUT_DIR="./build/web"
 
-GAME_NAME="odin-7-day-jam"
+GAME_NAME="downstream"
 EXE_NAME=$GAME_NAME
 
 OS=$(uname)

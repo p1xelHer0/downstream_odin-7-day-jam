@@ -7,9 +7,9 @@ permissions:
   contents: write
 
 env:
-  EXE_NAME: game
+  EXE_NAME: downstream
   itchio_api_key: ${{ secrets.ITCHIO_API_KEY }}
-  itchio_project: p1xelHer0/odin-7-day-jam
+  itchio_project: p1xelHer0/downstream
 
 # https://github.com/marketplace/actions/setup-odin
 # https://github.com/mymindstorm/setup-emsdk

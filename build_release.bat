@@ -3,7 +3,7 @@ setlocal
 
 set OUT_DIR=.\build\release
 
-set GAME_NAME=odin-7-day-jam
+set GAME_NAME=downstream
 set EXE_NAME=%GAME_NAME%-Win-x64.exe
 
 set SOKOL_ROOT=.\src\third_party\sokol-odin\sokol
