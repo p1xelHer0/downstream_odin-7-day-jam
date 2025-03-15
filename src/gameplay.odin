@@ -165,7 +165,6 @@ gameplay_render :: proc(renderer: ^GFX_Renderer, game: ^Game, tick: u64)
 
   case .DEAD:
     text_dead_color()
-    level := game.levels[game.level_cur]
     level_cur_text := game.level_cur + 1
     sdtx.printf("You died on level %v!\n\n\n", level_cur_text)
     text_default_color()
