@@ -11,18 +11,6 @@ Asset :: struct
   bytes: []u8,
 }
 
-// Sound_Name :: enum
-// {
-//   WAVE
-// }
-//
-// @(rodata)
-// SOUND := #partial[Sound_Name]Asset {
-//   .WAVE = {
-//     bytes = #load("wave.ogg"),
-//   }
-// }
-
 @(rodata)
 ATLAS := Asset {
   bytes = #load("ATLAS.png"),
@@ -101,6 +89,26 @@ SPRITE := #partial [Sprite_Name]Sprite {
   },
 }
 
+////////////////////////////////////////
+
+Sound_Name :: enum
+{
+  ATTACK_SWORD_1,
+}
+
+@(rodata)
+SOUND := [Sound_Name]Asset {
+  .ATTACK_SWORD_1 = {bytes = #load("sounds/human_atk_sword_1.ogg")},
+}
+
+Music_Name :: enum
+{
+  Game,
+  Menu,
+}
+
+////////////////////////////////////////
+
 Level :: struct
 {
   bytes: []u8,
@@ -110,13 +118,13 @@ Level :: struct
 @(rodata)
 LEVELS := [?]Level {
   {
-    bytes = #load("level_1.png"),
+    bytes = #load("levels/level_1.png"),
     text = {
       "You drift down the stream...",
     },
   },
   {
-    bytes = #load("level_2.png"),
+    bytes = #load("levels/level_2.png"),
     text = {
       "- Steer in crossings with:",
       "",
@@ -126,7 +134,7 @@ LEVELS := [?]Level {
     },
   },
   {
-    bytes = #load("level_3.png"),
+    bytes = #load("levels/level_3.png"),
     text = {
       "- Some water slows you down",
       "- Other speed you up",
@@ -134,38 +142,38 @@ LEVELS := [?]Level {
   },
 
   {
-    bytes = #load("level_4.png"),
+    bytes = #load("levels/level_4.png"),
     text = {
       "- Some spots are magical",
     },
   },
   {
-    bytes = #load("level_5.png"),
+    bytes = #load("levels/level_5.png"),
     text = {
       "- Sometime the fastest",
       "  path is deadly...",
     },
   },
   {
-    bytes = #load("level_6.png"),
+    bytes = #load("levels/level_6.png"),
     text = {
       "- You might not know",
       "  where to go...",
     },
   },
   {
-    bytes = #load("level_7.png"),
+    bytes = #load("levels/level_7.png"),
     text = {
       "- You might need",
       "  to be quick!",
     },
   },
   {
-    bytes = #load("level_8.png"),
+    bytes = #load("levels/level_8.png"),
     text = {
       "Good luck!",
     },
   },
 }
 
-ICON :: #load("icon.png")
+ICON :: #load("ICON.png")

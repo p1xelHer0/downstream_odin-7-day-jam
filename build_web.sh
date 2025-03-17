@@ -47,6 +47,13 @@ $SOKOL_SHDC_PATH -i src/shaders/shader.glsl -o src/shaders/shader.glsl.odin -l g
 rm -rf $OUT_DIR && mkdir -p $OUT_DIR && cd $OUT_DIR
 odin build ../../src/main_web -out=$EXE_NAME -target:js_wasm32 -build-mode:obj -vet -o:speed -no-bounds-check -show-timings
 # odin build ../../src/main_web -out=$EXE_NAME -target:js_wasm32 -build-mode:obj -vet -debug
+cp ../../src/main_web/style.css .
+cp ../../src/main_web/sfx.js .
+for ogg in ../../src/assets/sounds/*.ogg; do
+  if [ -f "$ogg" ]; then
+    cp "$ogg" .
+  fi
+done
 cp $ODIN_ROOT/core/sys/wasm/js/odin.js .
 
 files="./$EXE_NAME.wasm.o $SOKOL_ROOT/app/sokol_app_wasm_gl_release.a $SOKOL_ROOT/glue/sokol_glue_wasm_gl_release.a $SOKOL_ROOT/log/sokol_log_wasm_gl_release.a $SOKOL_ROOT/gfx/sokol_gfx_wasm_gl_release.a $SOKOL_ROOT/audio/sokol_audio_wasm_gl_release.a $SOKOL_ROOT/debugtext/sokol_debugtext_wasm_gl_release.a"

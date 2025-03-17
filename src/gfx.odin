@@ -1,4 +1,4 @@
-package game
+package downstream
 
 import "core:c"
 import "core:fmt"

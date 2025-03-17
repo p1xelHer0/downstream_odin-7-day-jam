@@ -1,4 +1,4 @@
-package game
+package downstream
 
 import "core:fmt"
 // import "core:slice"
@@ -406,10 +406,18 @@ handle_play_input :: proc(game: ^Game, input: Input, timer: ^Timer)
 {
   if .LEFT in input.keys
   {
+    if game.player.dir != .LEFT
+    {
+      sfx_play_sound(.ATTACK_SWORD_1)
+    }
     game.player.dir = .LEFT
   }
   if .RIGHT in input.keys
   {
+    if game.player.dir != .RIGHT
+    {
+      sfx_play_sound(.ATTACK_SWORD_1)
+    }
     game.player.dir = .RIGHT
   }
   if .DOWN in input.keys

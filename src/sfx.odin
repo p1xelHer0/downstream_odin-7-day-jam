@@ -1,8 +1,13 @@
-package game
+package downstream
 
-// import sa "third_party/sokol-odin/sokol/audio"
+import "assets"
 
-sfx_init :: proc() -> bool
+sfx_init :: proc()
 {
-  return true
+  _sfx_init()
+}
+
+sfx_play_sound :: proc(sound: assets.Sound_Name)
+{
+  _sfx_play_sound(sound)
 }

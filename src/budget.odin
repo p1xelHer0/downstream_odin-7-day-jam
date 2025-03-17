@@ -1,6 +1,9 @@
-package game
+package downstream
 
-BUDGET_GFX_SPRITES :: 40 * 23 * 2 // two sprites on each tiles should be enough for now
+// two sprites on each tiles should be enough for now
+BUDGET_GFX_SPRITES :: 40 * 23 * 2
+
+BUDGET_SFX_RESOURCES :: 64
 
 BUDGET_GAMEPLAY_TILES  :: (40 * 23) / 4 // let's assume we never fill more than 1/4 of the screen with tiles for now
 BUDGET_GAMEPLAY_LEVELS :: 10

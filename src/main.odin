@@ -1,4 +1,4 @@
-package game
+package downstream
 
 // import "core:c"
 import "core:fmt"
@@ -20,6 +20,7 @@ GAME_NAME :: "Downstream"
 Game_Mem :: struct
 {
   RENDERER: GFX_Renderer,
+  AUDIO:    SFX_Audio,
   TIMER:    Timer,
   INPUT:    Input,
   GAME:     Game,
@@ -133,12 +134,7 @@ game_init :: proc()
     return
   }
 
-  sfx_init_success := sfx_init()
-  if !sfx_init_success
-  {
-    fmt.eprintfln("failed to init sfx")
-    return
-  }
+  sfx_init()
 
   gameplay_init(&G.GAME)
   gameplay_start_level(&G.GAME, 0)
